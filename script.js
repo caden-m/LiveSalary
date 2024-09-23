@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (!isTimerRunning) {
             startEarningsTimer();
-            startStopBtn.textContent = 'Pause';
+            startStopBtn.textContent = 'Stop';
             isTimerRunning = true;
         } else {
             stopEarningsTimer();
@@ -119,7 +119,3 @@ document.addEventListener('DOMContentLoaded', function () {
     resetBtn.addEventListener('click', resetTimer);
     toggleRateBtn.addEventListener('click', toggleRateVisibility);
 });
-
-
-
-
