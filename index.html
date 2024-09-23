@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset='utf-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <title>Live Salary</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Live Salary</h1>
+        </header>
+        <main>
+            <div id="timerDisplay" class="time-display">
+                <span id="hours">00</span>:<span id="minutes">00</span>:<span id="seconds">00</span>
+                <span id="amPm">AM</span>
+            </div>
+            <div id="dateDisplay" class="date-display">Tuesday, 21 May</div>
+            <div id="earnings">Earnings: $0.00</div>
+            <div class="input-container">
+                <label for="hourlyRate">Hourly Rate:</label>
+                <input type="text" id="hourlyRate" placeholder="Enter your hourly rate" inputmode="decimal">
+                <button id="toggleRateBtn">Hide Rate</button>
+                <div id="validationMessage"></div>
+            </div>
+            <div class="button-container">
+                <button id="startStopBtn">Start</button>
+                <button id="resetBtn">Reset</button>
+            </div>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
+
+

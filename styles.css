@@ -1,0 +1,124 @@
+@import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@300;400;700&family=DM+Mono:wght@400;500&family=Source+Code+Pro:ital,wght@0,400;0,500;0,600;0,900;1,400;1,500;1,600;1,700;1,900&family=Ubuntu:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
+
+:root {
+    --primary: rgb(20, 20, 20);
+    --secondary: rgb(63, 63, 63);
+    --tertiary: rgb(40, 40, 40);
+    --text: rgb(245, 245, 245);
+    --highlighted: rgb(245, 245, 245);
+}
+
+body, html {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background-color: var(--primary);
+    font-family: 'DM Mono', monospace;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.container {
+    width: 100%;
+    max-width: 600px;
+    text-align: center;
+    padding: 20px;
+}
+
+header {
+    margin-bottom: 20px;
+    color: var(--text);
+}
+
+h1 {
+    font-size: 2rem;
+}
+
+.time-display {
+    font-size: 3rem;
+    color: var(--secondary);
+    margin-bottom: 20px;
+}
+
+.date-display {
+    font-size: 1.5rem;
+    color: var(--text);
+    margin-bottom: 20px;
+}
+
+#earnings {
+    font-size: 5rem;
+    color: var(--highlighted);
+    margin-bottom: 20px;
+}
+
+.input-container {
+    margin-bottom: 20px;
+}
+
+input[type="text"], input[type="password"], button {
+    padding: 10px;
+    border-radius: 5px;
+    border: none;
+    width: 100%;
+    box-sizing: border-box;
+    background-color: var(--tertiary);
+    color: var(--text);
+    font-size: 1rem;
+    margin: 5px 0;
+}
+
+.input-container label {
+    display: block;
+    text-align: left;
+    margin-bottom: 5px;
+}
+
+.button-container {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+button {
+    background-color: var(--secondary);
+    color: var(--text);
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    padding: 10px 20px;
+    font-size: 1rem;
+    border-radius: 5px;
+}
+
+button:hover {
+    background-color: var(--highlighted);
+    color: var(--primary);
+}
+
+#validationMessage {
+    color: red;
+    font-size: 1rem;
+    margin-top: 10px;
+    text-align: left;
+}
+
+::-webkit-scrollbar {
+    width: 5px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--secondary);
+    border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--highlighted);
+}
