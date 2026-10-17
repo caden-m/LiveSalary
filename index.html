@@ -1,38 +1,159 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset='utf-8'>
-    <!-- Viewport meta tag for mobile devices -->
-    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-    <title>Live Salary</title>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self'; manifest-src 'self'; worker-src 'self'; connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com; base-uri 'none'; object-src 'none'; form-action 'self'">
+    <meta name="referrer" content="no-referrer">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Live Salary — watch your earnings tick up in real time</title>
+    <meta name="description" content="A minimalist live earnings counter. Enter your hourly rate or salary and watch what you earn, second by second.">
+    <link rel="canonical" href="https://mylivesalary.com/">
+    <meta name="theme-color" content="#0e0e10" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#f6f5f1" media="(prefers-color-scheme: light)">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Live Salary">
+    <meta property="og:description" content="Watch your earnings tick up in real time.">
+    <meta property="og:url" content="https://mylivesalary.com/">
+    <meta property="og:image" content="https://mylivesalary.com/assets/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="A large live earnings counter reading $14.72">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Live Salary">
+    <meta name="twitter:description" content="Watch your earnings tick up in real time.">
+    <meta name="twitter:image" content="https://mylivesalary.com/assets/og-image.png">
+    <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Live Salary">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=JetBrains+Mono:wght@300;400;500&display=swap" crossorigin="anonymous">
     <link rel="stylesheet" href="styles.css">
+    <!-- Applies a saved theme before first paint so there is no flash -->
+    <script src="theme.js"></script>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Live Salary</h1>
-        </header>
-        <main>
-            <div id="timerDisplay" class="time-display">
-                <span id="hours">00</span>:<span id="minutes">00</span>:<span id="seconds">00</span>
-                <span id="amPm">AM</span>
-            </div>
-            <div id="dateDisplay" class="date-display">Tuesday, 21 May</div>
-            <div id="earnings">Earnings: $0.00</div>
-            <div class="input-container">
-                <label for="hourlyRate">Hourly Rate:</label>
-                <input type="text" id="hourlyRate" placeholder="Enter your hourly rate" inputmode="decimal">
-                <button id="toggleRateBtn">Hide Rate</button>
-                <div id="validationMessage"></div>
-            </div>
-            <div class="button-container">
-                <button id="startStopBtn">Start</button>
-                <button id="resetBtn">Reset</button>
-            </div>
-        </main>
-    </div>
+    <header class="top">
+        <div class="clock">
+            <time id="clock" class="clock-time">00:00:00</time>
+            <span id="date" class="clock-date"></span>
+        </div>
+        <nav class="top-actions" aria-label="Page actions">
+            <button id="privacyBtn" class="icon-btn" type="button" aria-pressed="false" title="Privacy mode (P)" aria-label="Privacy mode">
+                <svg class="ic ic-eye" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg class="ic ic-eye-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 10.6a3 3 0 0 0 4.2 4.2"/><path d="M9.9 5.1A10.9 10.9 0 0 1 12 5c6.5 0 10 7 10 7a17.6 17.6 0 0 1-3.2 3.9"/><path d="M6.6 6.6C3.9 8.4 2 12 2 12s3.5 7 10 7c1.6 0 3-.4 4.2-.9"/></svg>
+            </button>
+            <button id="settingsBtn" class="icon-btn" type="button" title="Settings (S)" aria-label="Settings" aria-haspopup="dialog" aria-controls="settings">
+                <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2.5"/><circle cx="8" cy="17" r="2.5"/></svg>
+            </button>
+        </nav>
+    </header>
+
+    <main class="stage" id="stage" data-mode="stopwatch" data-running="false">
+        <p class="eyebrow" id="eyebrow">Ready</p>
+
+        <div class="amount sensitive" id="amount" role="group" aria-label="Earnings"><span class="amt-pre" id="amtPre"></span><span class="amt-main" id="amtMain">0.00</span><span class="amt-sub" id="amtSub">00</span><span class="amt-post" id="amtPost"></span></div>
+
+        <p class="meta sensitive" id="meta">00:00:00</p>
+
+        <div class="progress" id="progress" hidden>
+            <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Workday progress"><span id="progressFill"></span></div>
+        </div>
+
+        <div class="controls" id="controls">
+            <button id="startStopBtn" class="btn primary" type="button">Start</button>
+            <button id="resetBtn" class="btn" type="button">Reset</button>
+        </div>
+
+        <p class="hint" id="emptyHint" hidden>
+            <button class="link" id="setRateBtn" type="button">Set your rate</button> to begin
+        </p>
+    </main>
+
+    <footer class="stats" id="stats">
+        <dl class="stats-grid sensitive">
+            <div><dt>Day</dt><dd id="statDay">—</dd></div>
+            <div><dt>Week</dt><dd id="statWeek">—</dd></div>
+            <div><dt>Month</dt><dd id="statMonth">—</dd></div>
+            <div><dt>Year</dt><dd id="statYear">—</dd></div>
+        </dl>
+        <p class="stats-note sensitive" id="statsNote"></p>
+    </footer>
+
+    <dialog id="settings" class="sheet" aria-labelledby="settingsTitle">
+        <form method="dialog" class="sheet-body" id="settingsForm">
+            <header class="sheet-head">
+                <h2 id="settingsTitle">Settings</h2>
+                <button class="icon-btn" type="submit" aria-label="Close settings" title="Close (Esc)">
+                    <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+                </button>
+            </header>
+
+            <section class="group">
+                <h3 class="group-title">Pay</h3>
+                <div class="segmented" role="radiogroup" aria-label="Rate type">
+                    <label><input type="radio" name="rateMode" value="hourly" data-key="rateMode"><span>Hourly</span></label>
+                    <label><input type="radio" name="rateMode" value="annual" data-key="rateMode"><span>Annual</span></label>
+                </div>
+                <div class="field" data-show="rateMode:hourly">
+                    <label for="hourlyInput">Hourly rate</label>
+                    <div class="input-wrap"><span class="prefix" data-currency-symbol>$</span><input id="hourlyInput" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" data-key="hourly" data-type="number"></div>
+                </div>
+                <div class="field" data-show="rateMode:annual">
+                    <label for="annualInput">Annual salary</label>
+                    <div class="input-wrap"><span class="prefix" data-currency-symbol>$</span><input id="annualInput" type="text" inputmode="decimal" autocomplete="off" placeholder="0" data-key="annual" data-type="number"></div>
+                </div>
+                <div class="field">
+                    <label for="hoursInput">Hours per week</label>
+                    <div class="input-wrap"><input id="hoursInput" type="text" inputmode="decimal" autocomplete="off" placeholder="40" data-key="hoursPerWeek" data-type="number"><span class="suffix">h</span></div>
+                </div>
+                <p class="derived sensitive" id="derived"></p>
+                <div class="field">
+                    <label for="currencySelect">Currency</label>
+                    <select id="currencySelect" data-key="currency"></select>
+                </div>
+            </section>
+
+            <section class="group">
+                <h3 class="group-title">Mode</h3>
+                <div class="segmented" role="radiogroup" aria-label="Counting mode">
+                    <label><input type="radio" name="mode" value="stopwatch" data-key="mode"><span>Stopwatch</span></label>
+                    <label><input type="radio" name="mode" value="workday" data-key="mode"><span>Workday</span></label>
+                </div>
+                <p class="help" data-show="mode:stopwatch">Start and stop the counter yourself. Keeps running even if you close the tab.</p>
+                <p class="help" data-show="mode:workday">Counts automatically between your start and end time each day.</p>
+                <div class="field-row" data-show="mode:workday">
+                    <div class="field">
+                        <label for="dayStart">Start</label>
+                        <input id="dayStart" type="time" data-key="dayStart">
+                    </div>
+                    <div class="field">
+                        <label for="dayEnd">End</label>
+                        <input id="dayEnd" type="time" data-key="dayEnd">
+                    </div>
+                </div>
+            </section>
+
+            <section class="group">
+                <h3 class="group-title">Appearance</h3>
+                <div class="segmented" role="radiogroup" aria-label="Theme">
+                    <label><input type="radio" name="theme" value="auto" data-key="theme"><span>Auto</span></label>
+                    <label><input type="radio" name="theme" value="dark" data-key="theme"><span>Dark</span></label>
+                    <label><input type="radio" name="theme" value="light" data-key="theme"><span>Light</span></label>
+                </div>
+            </section>
+
+            <footer class="sheet-foot">
+                <p class="keys"><kbd>Space</kbd> start / stop &nbsp; <kbd>R</kbd> reset &nbsp; <kbd>P</kbd> privacy &nbsp; <kbd>S</kbd> settings</p>
+                <p class="fineprint">Everything is saved only in this browser. <button class="link" type="button" id="clearDataBtn">Clear saved data</button></p>
+            </footer>
+        </form>
+    </dialog>
+
     <script src="script.js"></script>
 </body>
 </html>
-
-
