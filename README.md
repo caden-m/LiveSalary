@@ -16,6 +16,7 @@ No build step, no framework, no backend. Everything is saved only in the visitor
 | `manifest.json` | Web-app manifest so the site can be installed to a home screen. |
 | `sw.js` | Service worker: caches the app shell so it loads instantly and works offline. |
 | `assets/` | Icons and the social preview image, plus the SVG sources they were rendered from. |
+| `assets/fonts/` | Self-hosted Inter and JetBrains Mono (latin subset, variable weight, woff2). Loaded by `@font-face` rules at the top of `styles.css`. |
 | `CNAME` | Tells GitHub Pages to serve the site at `mylivesalary.com`. Don't delete it. |
 
 ## Features
@@ -57,9 +58,9 @@ GitHub rebuilds the site within a minute or so. Work on a branch, then merge int
 
 ### Security notes
 
-- The page sets a Content-Security-Policy via a `<meta>` tag (GitHub Pages can't send custom headers). It allows scripts and styles only from this site plus Google Fonts, so **don't add inline `<script>` or `style=""`** — put code in files instead.
+- The page sets a Content-Security-Policy via a `<meta>` tag (GitHub Pages can't send custom headers). It allows scripts, styles and fonts only from this site, so **don't add inline `<script>` or `style=""`** — put code in files instead.
 - Make sure **"Enforce HTTPS"** is ticked in the repository's Settings → Pages, and that `mylivesalary.com` is listed under your account's Settings → Pages → Verified domains. Both are GitHub settings, not files in this repo.
-- The only third-party requests are to Google Fonts. Self-hosting the two font families under `assets/fonts/` would remove that dependency entirely.
+- The site makes no third-party requests at all: the two font families are self-hosted under `assets/fonts/`, so nothing about a visit is shared with Google or anyone else, and the app works fully offline.
 
 ## Regenerating icons
 
