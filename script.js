@@ -194,12 +194,14 @@
         el.date.textContent = d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
     }
 
+    // The full title from index.html is what search engines should see; it's only replaced while earning.
+    const BASE_TITLE = document.title;
     let lastTitleSecond = -1;
     function renderTitle(now, earnings, active) {
         const sec = Math.floor(now / 1000);
         if (sec === lastTitleSecond) return;
         lastTitleSecond = sec;
-        document.title = active && !state.privacy ? `${fmt.format(truncateMinor(earnings))} · Live Salary` : 'Live Salary';
+        document.title = active && !state.privacy ? `${fmt.format(truncateMinor(earnings))} · Live Salary` : BASE_TITLE;
     }
 
     let lastProgressPct = -1;

@@ -16,6 +16,7 @@ No build step, no framework, no backend. Everything is saved only in the visitor
 | `manifest.json` | Web-app manifest so the site can be installed to a home screen. |
 | `sw.js` | Service worker: caches the app shell so it loads instantly and works offline. |
 | `assets/` | Icons and the social preview image, plus the SVG sources they were rendered from. |
+| `robots.txt`, `sitemap.xml` | Tell search engines the site may be indexed and where the page is. Update `lastmod` in the sitemap when the page changes meaningfully. |
 | `CNAME` | Tells GitHub Pages to serve the site at `mylivesalary.com`. Don't delete it. |
 
 ## Features
