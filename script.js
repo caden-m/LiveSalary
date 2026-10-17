@@ -70,7 +70,7 @@
     const el = {
         stage: $('stage'), eyebrow: $('eyebrow'), meta: $('meta'), metaInfo: $('metaInfo'), metaSep: $('metaSep'), rateBtn: $('rateBtn'),
         rateForm: $('rateForm'), rateInline: $('rateInline'), rateUnit: $('rateUnit'),
-        amtPre: $('amtPre'), amtMain: $('amtMain'), amtSub: $('amtSub'), amtPost: $('amtPost'),
+        amount: $('amount'), amtPre: $('amtPre'), amtMain: $('amtMain'), amtSub: $('amtSub'), amtPost: $('amtPost'),
         progress: $('progress'), progressFill: $('progressFill'),
         controls: $('controls'), startStop: $('startStopBtn'), reset: $('resetBtn'),
         emptyHint: $('emptyHint'), setRate: $('setRateBtn'),
@@ -88,7 +88,7 @@
 
     // ---------- Money formatting ----------
 
-    let fmt, fmtWhole, minorScale, symbol, decimalSymbol;
+    let fmt, fmtWhole, fmtCompact, minorScale, symbol, decimalSymbol;
 
     function setupCurrency() {
         let currency = state.currency;
@@ -96,6 +96,9 @@
         catch { currency = state.currency = 'USD'; fmt = new Intl.NumberFormat(undefined, { style: 'currency', currency }); }
         try { fmtWhole = new Intl.NumberFormat(undefined, { style: 'currency', currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }); }
         catch { fmtWhole = fmt; }
+        // "$8.67M" for projections that would otherwise overflow their column.
+        try { fmtCompact = new Intl.NumberFormat(undefined, { style: 'currency', currency, notation: 'compact', maximumFractionDigits: 2 }); }
+        catch { fmtCompact = fmtWhole; }
         minorScale = Math.pow(10, fmt.resolvedOptions().maximumFractionDigits);
         symbol = (fmt.formatToParts(0).find(p => p.type === 'currency') || { value: currency }).value;
         decimalSymbol = (new Intl.NumberFormat(undefined).formatToParts(1.5).find(p => p.type === 'decimal') || { value: '.' }).value;
@@ -125,7 +128,11 @@
         el.amtMain.textContent = main;
         el.amtSub.textContent = (minorScale === 1 ? decimalSymbol : '') + String(sub).padStart(2, '0');
         el.amtPost.textContent = afterNumber ? post.trim() : '';
+        // Tell the CSS how wide the number is so it can shrink to fit the screen.
+        const width = main.length + (pre ? 0.6 : 0) + (afterNumber ? 0.8 : 0) + 1.2;
+        if (width !== lastAmountWidth) { lastAmountWidth = width; el.amount.style.setProperty('--chars', String(width)); }
     }
+    let lastAmountWidth = 0;
 
     // ---------- Derived values ----------
 
@@ -274,14 +281,16 @@
         lastMilestone = milestone;
     }
 
+    const fmtProjection = (v) => (v >= 1e6 ? fmtCompact : fmtWhole).format(v);
+
     function renderStats() {
         const rate = hourlyRate();
         const week = rate * state.hoursPerWeek, year = week * 52;
         const show = rate > 0;
-        el.statDay.textContent = show ? fmtWhole.format(week / 5) : '—';
-        el.statWeek.textContent = show ? fmtWhole.format(week) : '—';
-        el.statMonth.textContent = show ? fmtWhole.format(year / 12) : '—';
-        el.statYear.textContent = show ? fmtWhole.format(year) : '—';
+        el.statDay.textContent = show ? fmtProjection(week / 5) : '—';
+        el.statWeek.textContent = show ? fmtProjection(week) : '—';
+        el.statMonth.textContent = show ? fmtProjection(year / 12) : '—';
+        el.statYear.textContent = show ? fmtProjection(year) : '—';
         el.statsNote.textContent = show ? `at ${fmt.format(rate)}/hr · ${state.hoursPerWeek}h per week` : 'Projections appear once you set a rate';
     }
 

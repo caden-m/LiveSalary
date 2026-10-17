@@ -186,7 +186,9 @@ button { cursor: pointer; }
     margin: 0;
     font-family: var(--mono);
     font-weight: 300;
-    font-size: clamp(3.4rem, 19vw, 14rem);
+    /* As big as the screen allows, but never wider than it: --chars is set by script.js. */
+    --chars: 6;
+    font-size: min(clamp(3.4rem, 19vw, 14rem), calc((100vw - 2 * var(--pad-x)) / (var(--chars) * 0.62)));
     line-height: 1;
     letter-spacing: -0.04em;
     font-variant-numeric: tabular-nums;
@@ -349,9 +351,9 @@ button { cursor: pointer; }
 
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 24px;
-    width: min(100%, 640px);
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 28px 24px;
+    width: min(100%, 720px);
     margin: 0;
     transition: filter 0.35s var(--ease);
 }
@@ -482,7 +484,7 @@ kbd {
 
 @media (max-width: 600px) {
     body { font-size: 14px; }
-    .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 28px; }
+    .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .controls { width: 100%; max-width: 360px; }
     .btn { flex: 1; min-width: 0; }
     .sheet {

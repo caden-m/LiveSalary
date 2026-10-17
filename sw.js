@@ -1,7 +1,7 @@
 /* Live Salary service worker: makes the app installable and usable offline.
    Bump CACHE whenever the site's files change so old caches are dropped. */
 
-const CACHE = 'live-salary-v2.1.1';
+const CACHE = 'live-salary-v2.1.2';
 
 const APP_SHELL = [
     './',
