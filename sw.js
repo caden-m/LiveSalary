@@ -1,7 +1,7 @@
 /* Live Salary service worker: makes the app installable and usable offline.
    Bump CACHE whenever the site's files change so old caches are dropped. */
 
-const CACHE = 'live-salary-v2.2.0';
+const CACHE = 'live-salary-v2.3.0';
 
 const APP_SHELL = [
     './',
@@ -42,21 +42,20 @@ self.addEventListener('fetch', (event) => {
 
     const url = new URL(request.url);
     if (url.origin !== self.location.origin) return;
+    // The generated wage/salary/earner pages are plentiful and change with each rebuild: leave them to the network.
+    if (/^\/(hourly|salary|earns)\//.test(url.pathname)) return;
 
     const isNavigation = request.mode === 'navigate';
 
     event.respondWith(
         caches.open(CACHE).then(async (cache) => {
             // Any path with a query string (e.g. ?utm_source=…) still maps to the one cached page.
-            const cached = isNavigation
-                ? (await cache.match(request, { ignoreSearch: true })) || (await cache.match('./'))
-                : await cache.match(request);
+            const cached = await cache.match(request, { ignoreSearch: isNavigation });
 
             const refresh = fetch(request).then((response) => {
                 // Only store good, non-opaque responses, and never a URL with a query string.
                 if (response.ok && response.type !== 'opaque' && !url.search) {
-                    const copy = response.clone();
-                    event.waitUntil(cache.put(isNavigation ? './' : request, copy));
+                    event.waitUntil(cache.put(request, response.clone()));
                 }
                 return response;
             });
@@ -65,7 +64,8 @@ self.addEventListener('fetch', (event) => {
                 event.waitUntil(refresh.catch(() => {}));
                 return cached;
             }
-            return refresh.catch(() => Response.error());
+            // Offline and nothing cached: a page request falls back to the cached home page.
+            return refresh.catch(async () => (isNavigation && await cache.match('./')) || Response.error());
         })
     );
 });

@@ -1,0 +1,44 @@
+{
+  "_note": "Estimated annual earnings in USD, before tax. Athletes: Forbes World's Highest-Paid Athletes 2025 (12 months to May 2025). Musicians: Forbes highest-paid musicians 2025. Executives: total compensation from company proxy filings. Update yearly.",
+  "groups": [
+    {
+      "id": "athletes",
+      "title": "Athletes",
+      "source": "Forbes, World's Highest-Paid Athletes 2025",
+      "people": [
+        { "slug": "cristiano-ronaldo", "name": "Cristiano Ronaldo", "role": "Footballer, Al-Nassr", "annual": 275000000 },
+        { "slug": "stephen-curry", "name": "Stephen Curry", "role": "NBA, Golden State Warriors", "annual": 156000000 },
+        { "slug": "tyson-fury", "name": "Tyson Fury", "role": "Boxer", "annual": 146000000 },
+        { "slug": "dak-prescott", "name": "Dak Prescott", "role": "NFL, Dallas Cowboys", "annual": 137000000 },
+        { "slug": "lionel-messi", "name": "Lionel Messi", "role": "Footballer, Inter Miami", "annual": 135000000 },
+        { "slug": "lebron-james", "name": "LeBron James", "role": "NBA, Los Angeles Lakers", "annual": 133800000 },
+        { "slug": "juan-soto", "name": "Juan Soto", "role": "MLB, New York Mets", "annual": 114000000 },
+        { "slug": "karim-benzema", "name": "Karim Benzema", "role": "Footballer, Al-Ittihad", "annual": 104000000 },
+        { "slug": "shohei-ohtani", "name": "Shohei Ohtani", "role": "MLB, Los Angeles Dodgers", "annual": 102500000 },
+        { "slug": "kevin-durant", "name": "Kevin Durant", "role": "NBA", "annual": 101400000 }
+      ]
+    },
+    {
+      "id": "entertainers",
+      "title": "Musicians & creators",
+      "source": "Forbes, highest-paid musicians 2025; Forbes Top Creators 2024",
+      "people": [
+        { "slug": "the-weeknd", "name": "The Weeknd", "role": "Musician", "annual": 298000000 },
+        { "slug": "taylor-swift", "name": "Taylor Swift", "role": "Musician", "annual": 202000000 },
+        { "slug": "beyonce", "name": "Beyoncé", "role": "Musician", "annual": 148000000 },
+        { "slug": "mrbeast", "name": "MrBeast", "role": "YouTuber", "annual": 85000000, "source": "Forbes Top Creators 2024" }
+      ]
+    },
+    {
+      "id": "executives",
+      "title": "Executives & public office",
+      "source": "Company proxy statements (total compensation); US Code for the presidency",
+      "people": [
+        { "slug": "satya-nadella", "name": "Satya Nadella", "role": "CEO, Microsoft (FY2024 compensation)", "annual": 79100000 },
+        { "slug": "tim-cook", "name": "Tim Cook", "role": "CEO, Apple (2024 compensation)", "annual": 74600000 },
+        { "slug": "jensen-huang", "name": "Jensen Huang", "role": "CEO, Nvidia (FY2025 compensation)", "annual": 49900000 },
+        { "slug": "us-president", "name": "The US President", "role": "Salary set by law since 2001", "annual": 400000 }
+      ]
+    }
+  ]
+}

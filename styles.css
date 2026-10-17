@@ -401,6 +401,9 @@ button { cursor: pointer; }
 }
 .about h2 { margin: 0 0 10px; font-size: 0.95rem; font-weight: 500; color: var(--fg-2); }
 .about p { margin: 0 0 10px; font-size: 0.88rem; line-height: 1.6; color: var(--fg-3); }
+.explore { display: flex; flex-direction: column; gap: 8px; margin-top: 18px; }
+.explore a { font-size: 0.88rem; color: var(--fg-2); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line-strong); }
+.explore a:hover { color: var(--fg); text-decoration-color: var(--fg); }
 
 /* ---------- Privacy ---------- */
 

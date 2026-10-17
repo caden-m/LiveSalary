@@ -1,0 +1,26 @@
+{
+  "_note": "Approximate US median annual wages, BLS Occupational Employment and Wage Statistics, May 2024. Rounded; verify against bls.gov/oes when updating.",
+  "source": "US Bureau of Labor Statistics, May 2024 (approximate medians)",
+  "occupations": [
+    { "slug": "registered-nurse", "name": "Registered nurse", "plural": "registered nurses", "annual": 93600 },
+    { "slug": "software-developer", "name": "Software developer", "plural": "software developers", "annual": 133080 },
+    { "slug": "elementary-school-teacher", "name": "Elementary school teacher", "plural": "elementary school teachers", "annual": 63680 },
+    { "slug": "police-officer", "name": "Police officer", "plural": "police officers", "annual": 77270 },
+    { "slug": "electrician", "name": "Electrician", "plural": "electricians", "annual": 62350 },
+    { "slug": "plumber", "name": "Plumber", "plural": "plumbers", "annual": 62970 },
+    { "slug": "lawyer", "name": "Lawyer", "plural": "lawyers", "annual": 151160 },
+    { "slug": "accountant", "name": "Accountant", "plural": "accountants", "annual": 81680 },
+    { "slug": "truck-driver", "name": "Truck driver", "plural": "heavy and tractor-trailer truck drivers", "annual": 57440 },
+    { "slug": "fast-food-worker", "name": "Fast food worker", "plural": "fast food and counter workers", "annual": 29540 },
+    { "slug": "airline-pilot", "name": "Airline pilot", "plural": "airline pilots, copilots and flight engineers", "annual": 226600 },
+    { "slug": "dentist", "name": "Dentist", "plural": "dentists", "annual": 179210 },
+    { "slug": "pharmacist", "name": "Pharmacist", "plural": "pharmacists", "annual": 137480 },
+    { "slug": "firefighter", "name": "Firefighter", "plural": "firefighters", "annual": 59850 },
+    { "slug": "mechanical-engineer", "name": "Mechanical engineer", "plural": "mechanical engineers", "annual": 102320 },
+    { "slug": "graphic-designer", "name": "Graphic designer", "plural": "graphic designers", "annual": 61300 },
+    { "slug": "chef", "name": "Chef", "plural": "chefs and head cooks", "annual": 60990 },
+    { "slug": "family-doctor", "name": "Family doctor", "plural": "family medicine physicians", "annual": 240790 },
+    { "slug": "construction-laborer", "name": "Construction laborer", "plural": "construction laborers", "annual": 46050 },
+    { "slug": "cashier", "name": "Cashier", "plural": "cashiers", "annual": 30710 }
+  ]
+}
