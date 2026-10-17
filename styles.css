@@ -58,12 +58,10 @@
 html { height: 100%; -webkit-text-size-adjust: 100%; }
 
 body {
+    --pad-x: max(20px, env(safe-area-inset-left), env(safe-area-inset-right));
     min-height: 100%;
     min-height: 100dvh;
     margin: 0;
-    display: grid;
-    grid-template-rows: auto 1fr auto;
-    padding: max(16px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
     background: var(--bg);
     color: var(--fg);
     font-family: var(--sans);
@@ -83,10 +81,16 @@ button { cursor: pointer; }
 /* ---------- Top bar ---------- */
 
 .top {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 2;
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
     gap: 16px;
+    padding: max(16px, env(safe-area-inset-top)) var(--pad-x) 0;
 }
 
 .clock { display: flex; flex-direction: column; gap: 2px; }
@@ -124,15 +128,17 @@ button { cursor: pointer; }
 
 /* ---------- Stage ---------- */
 
+/* The tracker owns the whole first screen; projections live below the fold. */
 .stage {
     position: relative;
+    min-height: 100dvh;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     text-align: center;
-    gap: 14px;
-    padding: 24px 0;
+    gap: 16px;
+    padding: 80px var(--pad-x) 72px;
     isolation: isolate;
 }
 
@@ -180,7 +186,7 @@ button { cursor: pointer; }
     margin: 0;
     font-family: var(--mono);
     font-weight: 300;
-    font-size: clamp(3rem, 15vw, 10.5rem);
+    font-size: clamp(3.4rem, 19vw, 14rem);
     line-height: 1;
     letter-spacing: -0.04em;
     font-variant-numeric: tabular-nums;
@@ -216,11 +222,63 @@ button { cursor: pointer; }
 .meta {
     margin: 0;
     font-family: var(--mono);
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     color: var(--fg-3);
     font-variant-numeric: tabular-nums;
     transition: filter 0.35s var(--ease);
 }
+
+/* The rate is a button in disguise: tap it to change it */
+.rate-btn {
+    padding: 0 0 1px;
+    border: 0;
+    border-bottom: 1px dashed var(--line-strong);
+    background: none;
+    font: inherit;
+    color: var(--fg-2);
+    transition: color 0.2s, border-color 0.2s;
+}
+.rate-btn:hover { color: var(--fg); border-bottom-color: var(--fg); border-bottom-style: solid; }
+
+/* Inline rate editor, shown in place of the meta line */
+.rate-form { display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 0; transition: filter 0.35s var(--ease); }
+.rate-label { font-size: 0.72rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--fg-3); }
+.rate-row { display: flex; align-items: center; gap: 10px; font-family: var(--mono); color: var(--fg-2); }
+.rate-row .prefix, .rate-row .suffix { font-size: 1.1rem; }
+.rate-row input {
+    width: 8ch;
+    padding: 0.15em 0;
+    border: 0;
+    border-bottom: 1px solid var(--fg);
+    border-radius: 0;
+    background: transparent;
+    font-family: var(--mono);
+    font-size: 1.6rem;
+    text-align: center;
+    color: var(--fg);
+    font-variant-numeric: tabular-nums;
+}
+.rate-row input:focus { outline: none; border-bottom-color: var(--accent); }
+.btn.small { min-width: 0; padding: 0.55em 1.1em; font-size: 0.85rem; margin-left: 6px; }
+
+/* Scroll cue to the projections below */
+.scroll-hint {
+    position: absolute;
+    left: 50%;
+    bottom: max(18px, env(safe-area-inset-bottom));
+    translate: -50% 0;
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    color: var(--fg-3);
+    transition: color 0.2s;
+    animation: bob 2.6s ease-in-out infinite;
+}
+.scroll-hint:hover { color: var(--fg); }
+.scroll-hint .ic { width: 16px; height: 16px; }
+@keyframes bob { 50% { translate: -50% 4px; } }
 
 /* Workday progress */
 .progress { width: min(100%, 420px); margin-top: 8px; }
@@ -279,34 +337,41 @@ button { cursor: pointer; }
 
 /* ---------- Stats ---------- */
 
-.stats { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.stats {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 22px;
+    padding: 56px var(--pad-x) max(72px, env(safe-area-inset-bottom));
+    border-top: 1px solid var(--line);
+    scroll-margin-top: 0;
+}
 
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 0;
-    width: min(100%, 560px);
+    gap: 24px;
+    width: min(100%, 640px);
     margin: 0;
-    border-top: 1px solid var(--line);
-    padding-top: 14px;
     transition: filter 0.35s var(--ease);
 }
-.stats-grid > div { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.stats-grid > div { display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .stats-grid dt { font-size: 0.68rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--fg-3); }
 .stats-grid dd {
     margin: 0;
     font-family: var(--mono);
-    font-size: 0.95rem;
-    color: var(--fg-2);
+    font-weight: 300;
+    font-size: clamp(1.3rem, 3vw, 1.8rem);
+    color: var(--fg);
     font-variant-numeric: tabular-nums;
 }
-.stats-note { margin: 0; font-size: 0.78rem; color: var(--fg-3); transition: filter 0.35s var(--ease); }
+.stats-note { margin: 0; font-size: 0.8rem; color: var(--fg-3); transition: filter 0.35s var(--ease); }
 
 /* ---------- Privacy ---------- */
 
 .privacy .sensitive { user-select: none; -webkit-user-select: none; }
 .privacy .amount { filter: blur(18px); }
-.privacy .meta, .privacy .stats-grid, .privacy .stats-note, .privacy .derived { filter: blur(6px); }
+.privacy .meta, .privacy .stats-grid, .privacy .stats-note, .privacy .derived, .privacy .rate-form { filter: blur(6px); }
 
 /* ---------- Settings sheet ---------- */
 
@@ -417,7 +482,7 @@ kbd {
 
 @media (max-width: 600px) {
     body { font-size: 14px; }
-    .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 14px; }
+    .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 28px; }
     .controls { width: 100%; max-width: 360px; }
     .btn { flex: 1; min-width: 0; }
     .sheet {
@@ -433,9 +498,11 @@ kbd {
 }
 
 @media (max-height: 520px) {
-    .stage { padding: 8px 0; gap: 8px; }
-    .amount { font-size: clamp(2.5rem, 14vh, 6rem); }
+    .stage { gap: 10px; padding-top: 64px; padding-bottom: 48px; }
+    .amount { font-size: clamp(2.5rem, 16vh, 7rem); }
 }
+
+html { scroll-behavior: smooth; }
 
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }

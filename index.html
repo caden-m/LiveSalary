@@ -58,7 +58,17 @@
 
         <div class="amount sensitive" id="amount" role="group" aria-label="Earnings"><span class="amt-pre" id="amtPre"></span><span class="amt-main" id="amtMain">0.00</span><span class="amt-sub" id="amtSub">00</span><span class="amt-post" id="amtPost"></span></div>
 
-        <p class="meta sensitive" id="meta">00:00:00</p>
+        <p class="meta sensitive" id="meta"><span id="metaInfo">00:00:00</span><span class="sep" id="metaSep"> · </span><button class="rate-btn" id="rateBtn" type="button" title="Change your rate"></button></p>
+
+        <form class="rate-form sensitive" id="rateForm" hidden autocomplete="off">
+            <label class="rate-label" for="rateInline">Your rate</label>
+            <div class="rate-row">
+                <span class="prefix" data-currency-symbol>$</span>
+                <input id="rateInline" type="text" inputmode="decimal" placeholder="0.00" enterkeyhint="done">
+                <span class="suffix" id="rateUnit">/hr</span>
+                <button class="btn small" type="submit">Set</button>
+            </div>
+        </form>
 
         <div class="progress" id="progress" hidden>
             <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Workday progress"><span id="progressFill"></span></div>
@@ -72,9 +82,14 @@
         <p class="hint" id="emptyHint" hidden>
             <button class="link" id="setRateBtn" type="button">Set your rate</button> to begin
         </p>
+
+        <a class="scroll-hint" href="#stats" aria-label="See projections">
+            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 10l6 6 6-6"/></svg>
+        </a>
     </main>
 
     <footer class="stats" id="stats">
+        <p class="eyebrow">At this rate</p>
         <dl class="stats-grid sensitive">
             <div><dt>Day</dt><dd id="statDay">—</dd></div>
             <div><dt>Week</dt><dd id="statWeek">—</dd></div>
@@ -107,25 +122,25 @@
                     <label for="annualInput">Annual salary</label>
                     <div class="input-wrap"><span class="prefix" data-currency-symbol>$</span><input id="annualInput" type="text" inputmode="decimal" autocomplete="off" placeholder="0" data-key="annual" data-type="number"></div>
                 </div>
-                <div class="field">
-                    <label for="hoursInput">Hours per week</label>
-                    <div class="input-wrap"><input id="hoursInput" type="text" inputmode="decimal" autocomplete="off" placeholder="40" data-key="hoursPerWeek" data-type="number"><span class="suffix">h</span></div>
+                <div class="field-row">
+                    <div class="field">
+                        <label for="hoursInput">Hours / week</label>
+                        <div class="input-wrap"><input id="hoursInput" type="text" inputmode="decimal" autocomplete="off" placeholder="40" data-key="hoursPerWeek" data-type="number"><span class="suffix">h</span></div>
+                    </div>
+                    <div class="field">
+                        <label for="currencySelect">Currency</label>
+                        <select id="currencySelect" data-key="currency"></select>
+                    </div>
                 </div>
                 <p class="derived sensitive" id="derived"></p>
-                <div class="field">
-                    <label for="currencySelect">Currency</label>
-                    <select id="currencySelect" data-key="currency"></select>
-                </div>
             </section>
 
             <section class="group">
-                <h3 class="group-title">Mode</h3>
+                <h3 class="group-title">Count</h3>
                 <div class="segmented" role="radiogroup" aria-label="Counting mode">
                     <label><input type="radio" name="mode" value="stopwatch" data-key="mode"><span>Stopwatch</span></label>
                     <label><input type="radio" name="mode" value="workday" data-key="mode"><span>Workday</span></label>
                 </div>
-                <p class="help" data-show="mode:stopwatch">Start and stop the counter yourself. Keeps running even if you close the tab.</p>
-                <p class="help" data-show="mode:workday">Counts automatically between your start and end time each day.</p>
                 <div class="field-row" data-show="mode:workday">
                     <div class="field">
                         <label for="dayStart">Start</label>
@@ -139,7 +154,7 @@
             </section>
 
             <section class="group">
-                <h3 class="group-title">Appearance</h3>
+                <h3 class="group-title">Theme</h3>
                 <div class="segmented" role="radiogroup" aria-label="Theme">
                     <label><input type="radio" name="theme" value="auto" data-key="theme"><span>Auto</span></label>
                     <label><input type="radio" name="theme" value="dark" data-key="theme"><span>Dark</span></label>
@@ -148,8 +163,7 @@
             </section>
 
             <footer class="sheet-foot">
-                <p class="keys"><kbd>Space</kbd> start / stop &nbsp; <kbd>R</kbd> reset &nbsp; <kbd>P</kbd> privacy &nbsp; <kbd>S</kbd> settings</p>
-                <p class="fineprint">Everything is saved only in this browser. <button class="link" type="button" id="clearDataBtn">Clear saved data</button></p>
+                <p class="fineprint">Saved only in this browser · <button class="link" type="button" id="clearDataBtn">Clear saved data</button></p>
             </footer>
         </form>
     </dialog>

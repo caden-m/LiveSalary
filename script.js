@@ -68,7 +68,8 @@
 
     const $ = (id) => document.getElementById(id);
     const el = {
-        stage: $('stage'), eyebrow: $('eyebrow'), meta: $('meta'),
+        stage: $('stage'), eyebrow: $('eyebrow'), meta: $('meta'), metaInfo: $('metaInfo'), metaSep: $('metaSep'), rateBtn: $('rateBtn'),
+        rateForm: $('rateForm'), rateInline: $('rateInline'), rateUnit: $('rateUnit'),
         amtPre: $('amtPre'), amtMain: $('amtMain'), amtSub: $('amtSub'), amtPost: $('amtPost'),
         progress: $('progress'), progressFill: $('progressFill'),
         controls: $('controls'), startStop: $('startStopBtn'), reset: $('resetBtn'),
@@ -81,7 +82,7 @@
     };
     const progressBar = el.progress.querySelector('[role="progressbar"]');
     const sensitiveNodes = document.querySelectorAll('.sensitive');
-    const rateInputs = [$('hourlyInput'), $('annualInput')];
+    const rateInputs = [$('hourlyInput'), $('annualInput'), $('rateInline')];
     const themeColorMetas = document.querySelectorAll('meta[name="theme-color"]');
     const THEME_BG = { dark: '#0e0e10', light: '#f6f5f1' };
 
@@ -211,16 +212,21 @@
         let earnings = 0, active = false;
 
         el.stage.dataset.mode = state.mode;
-        el.emptyHint.hidden = ready;
+        el.emptyHint.hidden = ready || editingRate;
+        el.meta.hidden = editingRate;
+        el.metaSep.hidden = el.rateBtn.hidden = !ready;
+        if (ready) {
+            el.rateBtn.textContent = state.rateMode === 'annual' ? `${fmtWhole.format(state.annual)}/yr` : `${fmt.format(rate)}/hr`;
+        }
 
         if (state.mode === 'stopwatch') {
             const elapsed = stopwatchElapsed(now);
             active = ready && !!state.runningSince;
             earnings = rate * (elapsed / 3600000);
-            el.controls.hidden = !ready;
+            el.controls.hidden = !ready || editingRate;
             el.progress.hidden = true;
             el.eyebrow.textContent = active ? 'Earning now' : elapsed > 0 ? 'Paused' : ready ? 'Ready' : 'Live Salary';
-            el.meta.textContent = ready ? `${fmtDuration(elapsed)} · ${fmt.format(rate)}/hr` : 'Earnings, second by second';
+            el.metaInfo.textContent = ready ? fmtDuration(elapsed) : 'Earnings, second by second';
             el.startStop.textContent = active ? 'Stop' : elapsed > 0 ? 'Resume' : 'Start';
         } else {
             const { start, end, durationMs } = shiftWindow(now);
@@ -231,10 +237,10 @@
             el.progress.hidden = !ready;
             renderProgress(worked, durationMs);
             const range = `${state.dayStart}–${state.dayEnd}`;
-            if (!ready) { el.eyebrow.textContent = 'Live Salary'; el.meta.textContent = 'Earnings, second by second'; }
-            else if (now < start) { el.eyebrow.textContent = 'Workday'; el.meta.textContent = `${range} · starts in ${fmtDuration(start - now, { seconds: false })}`; }
-            else if (now >= end) { el.eyebrow.textContent = 'Day complete'; el.meta.textContent = `${range} · ${fmtDuration(durationMs, { seconds: false })} worked`; }
-            else { el.eyebrow.textContent = 'Earned today'; el.meta.textContent = `${range} · ${fmtDuration(end - now, { seconds: false })} left`; }
+            if (!ready) { el.eyebrow.textContent = 'Live Salary'; el.metaInfo.textContent = 'Earnings, second by second'; }
+            else if (now < start) { el.eyebrow.textContent = 'Workday'; el.metaInfo.textContent = `${range} · starts in ${fmtDuration(start - now, { seconds: false })}`; }
+            else if (now >= end) { el.eyebrow.textContent = 'Day complete'; el.metaInfo.textContent = `${range} · ${fmtDuration(durationMs, { seconds: false })} worked`; }
+            else { el.eyebrow.textContent = 'Earned today'; el.metaInfo.textContent = `${range} · ${fmtDuration(end - now, { seconds: false })} left`; }
         }
 
         el.stage.dataset.running = String(active);
@@ -352,8 +358,37 @@
         state.runningSince = null;
     }
 
+    // ---------- Inline rate editing ----------
+
+    // Clicking the rate under the counter (or "Set your rate") edits it right there,
+    // in whichever unit the pay type uses, without opening Settings.
+    let editingRate = false;
+    function startRateEdit() {
+        if (editingRate) return;
+        editingRate = true;
+        const annual = state.rateMode === 'annual';
+        el.rateUnit.textContent = annual ? '/yr' : '/hr';
+        const current = annual ? state.annual : state.hourly;
+        el.rateInline.value = current > 0 ? String(current) : '';
+        el.rateForm.hidden = false;
+        render();
+        el.rateInline.focus();
+        el.rateInline.select();
+    }
+    function endRateEdit(commit) {
+        if (!editingRate) return;
+        editingRate = false;
+        el.rateForm.hidden = true;
+        if (commit && el.rateInline.value.trim() !== '') {
+            state[state.rateMode === 'annual' ? 'annual' : 'hourly'] = parseAmount(el.rateInline.value);
+            save();
+            stateToForm();
+        }
+        refreshAll();
+    }
+
     function toggleStopwatch() {
-        if (!hasRate()) { openSettings(true); return; }
+        if (!hasRate()) { startRateEdit(); return; }
         const now = Date.now();
         if (state.runningSince) bankStopwatch(now); else state.runningSince = now;
         save();
@@ -392,6 +427,7 @@
 
     function openSettings(focusRate = false) {
         if (el.settings.open) return;
+        endRateEdit(false);
         el.settings.showModal();
         if (focusRate) {
             const input = state.rateMode === 'annual' ? $('annualInput') : $('hourlyInput');
@@ -408,7 +444,10 @@
         el.currencySelect.replaceChildren(...CURRENCIES.map(code => {
             const opt = document.createElement('option');
             opt.value = code;
-            opt.textContent = names ? `${code} — ${names.of(code)}` : code;
+            // Short label ("USD $") so it fits the narrow field; the full name goes in the tooltip.
+            const sym = (new Intl.NumberFormat(undefined, { style: 'currency', currency: code }).formatToParts(0).find(p => p.type === 'currency') || { value: '' }).value;
+            opt.textContent = sym && sym !== code ? `${code} ${sym}` : code;
+            if (names) opt.title = names.of(code);
             return opt;
         }));
     }
@@ -445,17 +484,20 @@
         });
     }
 
+    // Keeps a money field to digits, one decimal point, and a comma that may act as the decimal separator.
+    function cleanNumberInput(input) {
+        if (input.type === 'password') return;
+        const cleaned = input.value.replace(/[^\d.,]/g, '').replace(/^(\d*[.,]\d*).*$/, '$1');
+        if (cleaned !== input.value) {
+            const pos = Math.max(0, (input.selectionStart || 0) - (input.value.length - cleaned.length));
+            input.value = cleaned;
+            input.setSelectionRange(pos, pos);
+        }
+    }
+
     function onFormInput(e) {
         const input = e.target;
-        if (input.dataset.type === 'number' && input.type !== 'password') {
-            // Digits, one decimal point, and a comma that may act as the decimal separator.
-            const cleaned = input.value.replace(/[^\d.,]/g, '').replace(/^(\d*[.,]\d*).*$/, '$1');
-            if (cleaned !== input.value) {
-                const pos = Math.max(0, (input.selectionStart || 0) - (input.value.length - cleaned.length));
-                input.value = cleaned;
-                input.setSelectionRange(pos, pos);
-            }
-        }
+        if (input.dataset.type === 'number') cleanNumberInput(input);
         formToState();
         save();
         refreshAll();
@@ -472,7 +514,7 @@
     // ---------- Keyboard ----------
 
     function onKey(e) {
-        if (e.metaKey || e.ctrlKey || e.altKey || e.repeat || el.settings.open) return;
+        if (e.metaKey || e.ctrlKey || e.altKey || e.repeat || el.settings.open || editingRate) return;
         // Let focused controls handle their own keys (Space/Enter on a button, typing in a field).
         if (e.target instanceof Element && e.target.closest('button, a, input, select, textarea, [contenteditable]')) return;
         switch (e.key) {
@@ -491,7 +533,12 @@
     el.reset.addEventListener('click', resetStopwatch);
     el.privacyBtn.addEventListener('click', togglePrivacy);
     el.settingsBtn.addEventListener('click', () => openSettings());
-    el.setRate.addEventListener('click', () => openSettings(true));
+    el.setRate.addEventListener('click', startRateEdit);
+    el.rateBtn.addEventListener('click', startRateEdit);
+    el.rateInline.addEventListener('input', () => cleanNumberInput(el.rateInline));
+    el.rateInline.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); endRateEdit(false); } });
+    el.rateInline.addEventListener('blur', () => { setTimeout(() => { if (editingRate && !el.rateForm.contains(document.activeElement)) endRateEdit(true); }, 0); });
+    el.rateForm.addEventListener('submit', (e) => { e.preventDefault(); endRateEdit(true); });
     el.clearData.addEventListener('click', clearData);
     el.form.addEventListener('input', onFormInput);
     el.form.addEventListener('change', onFormInput);
