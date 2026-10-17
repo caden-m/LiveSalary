@@ -1,7 +1,7 @@
 /* Live Salary service worker: makes the app installable and usable offline.
    Bump CACHE whenever the site's files change so old caches are dropped. */
 
-const CACHE = 'live-salary-v2.1.3';
+const CACHE = 'live-salary-v2.2.0';
 
 const APP_SHELL = [
     './',
@@ -9,6 +9,8 @@ const APP_SHELL = [
     'script.js',
     'theme.js',
     'manifest.json',
+    'assets/fonts/inter-latin.woff2',
+    'assets/fonts/jetbrains-mono-latin.woff2',
     'assets/icon.svg',
     'assets/icon-192.png',
     'assets/icon-512.png',
@@ -33,15 +35,13 @@ self.addEventListener('activate', (event) => {
 });
 
 // Stale-while-revalidate: answer from cache immediately, refresh the cache in the background.
-// Only our own files and the Google Fonts CDN are cached; everything else passes straight through.
+// Only our own files are cached; anything from another origin passes straight through.
 self.addEventListener('fetch', (event) => {
     const { request } = event;
     if (request.method !== 'GET') return;
 
     const url = new URL(request.url);
-    const isOwn = url.origin === self.location.origin;
-    const isFont = url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com';
-    if (!isOwn && !isFont) return;
+    if (url.origin !== self.location.origin) return;
 
     const isNavigation = request.mode === 'navigate';
 
