@@ -61,6 +61,10 @@ GitHub rebuilds the site within a minute or so. Work on a branch, then merge int
 - Make sure **"Enforce HTTPS"** is ticked in the repository's Settings → Pages, and that `mylivesalary.com` is listed under your account's Settings → Pages → Verified domains. Both are GitHub settings, not files in this repo.
 - The only third-party requests are to Google Fonts. Self-hosting the two font families under `assets/fonts/` would remove that dependency entirely.
 
+### Visitor counting
+
+Page views are counted with [GoatCounter](https://www.goatcounter.com) — dashboard at <https://cadenlivesalary.goatcounter.com>. It is cookie-free and records only the path, referrer, browser, screen size and country, so no consent banner is needed and nothing the visitor types is ever sent. The script tag at the bottom of `index.html` is pinned to `count.v5.js` with an `integrity` hash: if GoatCounter publishes a new version, update the filename and the hash together (`curl -s https://gc.zgo.at/count.v5.js | openssl dgst -sha384 -binary | openssl base64 -A`). Localhost visits are ignored automatically.
+
 ## Regenerating icons
 
 The PNGs in `assets/` are rendered from the SVGs beside them using macOS QuickLook:
