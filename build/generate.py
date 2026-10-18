@@ -28,14 +28,16 @@ HOURS_PER_WEEK = 40
 WEEKS_PER_YEAR = 52
 HOURS_PER_YEAR = HOURS_PER_WEEK * WEEKS_PER_YEAR          # 2,080
 FEDERAL_MIN_WAGE = 7.25
-US_MEDIAN_WEEKLY = 1196                                   # BLS, full-time median usual weekly earnings, Q2 2025
-US_MEDIAN_ANNUAL = US_MEDIAN_WEEKLY * WEEKS_PER_YEAR      # 62,192
-US_MEDIAN_HOURLY = US_MEDIAN_ANNUAL / HOURS_PER_YEAR      # ~29.90
-LIVING_WAGE_SINGLE = 25.0                                 # MIT Living Wage Calculator, single adult, no children, US average, 2025 (approx.)
-US_MEDIAN_HOUSEHOLD_INCOME = 80610                        # Census ACS 2023 1-year, US
+US_MEDIAN_WEEKLY = 1251                                   # BLS, full-time median usual weekly earnings, Q2 2026 (series LEU0252881500)
+US_MEDIAN_WEEKLY_LABEL = "Q2 2026"
+US_MEDIAN_ANNUAL = US_MEDIAN_WEEKLY * WEEKS_PER_YEAR      # 65,052
+US_MEDIAN_HOURLY = US_MEDIAN_ANNUAL / HOURS_PER_YEAR      # ~31.27
+LIVING_WAGE_SINGLE = 25.0                                 # Rough mid-point of MIT Living Wage Calculator state estimates for one adult, no children (MIT publishes no national figure)
+US_MEDIAN_HOUSEHOLD_INCOME = 81604                        # Census ACS 2024 1-year, US (ACSBR-025)
+US_MEDIAN_HOUSEHOLD_LABEL = "ACS 2024"
 
 # 2025 federal income tax, single filer. Rough take-home only: no credits, no 401(k), no health premiums.
-STANDARD_DEDUCTION = 15000
+STANDARD_DEDUCTION = 15750                                # 2025, after the July 2025 law (P.L. 119-21) raised it from $15,000
 BRACKETS = [(11925, 0.10), (48475, 0.12), (103350, 0.22), (197300, 0.24), (250525, 0.32), (626350, 0.35), (math.inf, 0.37)]
 SS_RATE, SS_CAP = 0.062, 176100
 MEDICARE_RATE, MEDICARE_EXTRA_FROM = 0.0145, 200000
@@ -312,7 +314,7 @@ def is_it_good_section(hourly, occupations, *, label=None):
 
     return f"""
         <h2>Is {label} good?</h2>
-        <p>{label.capitalize()} is <strong>{verdict}</strong>. It's {living} the roughly ${LIVING_WAGE_SINGLE:.0f} an hour that MIT's Living Wage Calculator estimates a single adult with no children needs on average in the US.</p>
+        <p>{label.capitalize()} is <strong>{verdict}</strong>. It's {living} the roughly ${LIVING_WAGE_SINGLE:.0f} an hour that a single adult with no children typically needs to cover basic costs in the US, going by MIT's Living Wage Calculator state estimates (which run from the low $20s to over $30 in expensive states).</p>
         <p>In practice it means about <strong>{money(net_month)} a month</strong> after federal taxes. At that level {rent_line} {left_line}</p>
         <p>{jobs_intro}: {jobs}.</p>"""
 
@@ -639,7 +641,7 @@ def trust_pages(people, occupations, states):
         <h2>Federal taxes (2025, single filer)</h2>
         <p>Take-home estimates subtract three things from gross pay:</p>
         <ul>
-            <li><strong>Federal income tax</strong> using the 2025 brackets for a single filer after the {money(STANDARD_DEDUCTION)} standard deduction: {', '.join(f'{r * 100:.0f}% to {money(u)}' for u, r in BRACKETS[:-1])}, then 37%.</li>
+            <li><strong>Federal income tax</strong> using the 2025 brackets for a single filer after the {money(STANDARD_DEDUCTION)} standard deduction (the amount set by the July 2025 tax law, up from the $15,000 announced earlier): {', '.join(f'{r * 100:.0f}% to {money(u)}' for u, r in BRACKETS[:-1])}, then 37%.</li>
             <li><strong>Social Security</strong> at {SS_RATE * 100:.1f}% of wages up to {money(SS_CAP)}.</li>
             <li><strong>Medicare</strong> at {MEDICARE_RATE * 100:.2f}%, plus 0.9% on wages over {money(MEDICARE_EXTRA_FROM)}.</li>
         </ul>
@@ -649,13 +651,13 @@ def trust_pages(people, occupations, states):
         <h2>Comparisons</h2>
         <ul>
             <li><strong>Federal minimum wage:</strong> ${FEDERAL_MIN_WAGE} an hour (unchanged since 2009). State pages use the state minimum in effect in 2025.</li>
-            <li><strong>US median wage:</strong> {money(US_MEDIAN_WEEKLY)} a week for full-time workers (BLS, median usual weekly earnings, Q2 2025), treated as {money(US_MEDIAN_ANNUAL)} a year or ${US_MEDIAN_HOURLY:.2f} an hour.</li>
-            <li><strong>Living wage:</strong> about ${LIVING_WAGE_SINGLE:.0f} an hour for a single adult with no children, the approximate national average from MIT's Living Wage Calculator (2025). Local living wages vary from the mid-teens to over $30.</li>
-            <li><strong>Median household income:</strong> {money(US_MEDIAN_HOUSEHOLD_INCOME)} nationally (Census ACS 2023); state figures on state pages. Household income usually combines more than one earner, so it is not directly comparable with one person's pay.</li>
+            <li><strong>US median wage:</strong> {money(US_MEDIAN_WEEKLY)} a week for full-time wage and salary workers (BLS, median usual weekly earnings, {US_MEDIAN_WEEKLY_LABEL}, not seasonally adjusted), treated as {money(US_MEDIAN_ANNUAL)} a year or ${US_MEDIAN_HOURLY:.2f} an hour.</li>
+            <li><strong>Living wage:</strong> about ${LIVING_WAGE_SINGLE:.0f} an hour for a single adult with no children. MIT's Living Wage Calculator publishes county and state estimates, not a national one; its 2026 state figures for one adult range from roughly the low $20s to over $30 (California $30.48, Washington $26.59), so ${LIVING_WAGE_SINGLE:.0f} is used here as a rough national mid-point.</li>
+            <li><strong>Median household income:</strong> {money(US_MEDIAN_HOUSEHOLD_INCOME)} nationally (Census {US_MEDIAN_HOUSEHOLD_LABEL} 1-year estimate); state figures on state pages are from the same release. Household income usually combines more than one earner, so it is not directly comparable with one person's pay.</li>
             <li><strong>Budget illustrations:</strong> {money(TYPICAL_RENT)} rent (roughly the national median asking rent) and {money(TYPICAL_GROCERIES)} a month of groceries for one adult. Your costs will differ; the point is scale, not precision.</li>
         </ul>
         <h2>Occupation pay</h2>
-        <p>Median annual wages for occupations come from the US Bureau of Labor Statistics Occupational Employment and Wage Statistics (May 2024), rounded. "Median" means half of workers in that job earn more and half earn less; pay varies widely by state, employer and experience.</p>
+        <p>Median annual wages for occupations are the national medians from the US Bureau of Labor Statistics Occupational Employment and Wage Statistics, May 2024 release, checked against the BLS data file. "Median" means half of workers in that job earn more and half earn less; pay varies widely by state, employer and experience. Where the site uses a plain job name for a BLS category (for example "family doctor" for family medicine physicians, or "dentist" for all dentists), the broader figure is used.</p>
         <h2>Celebrity and executive earnings</h2>
         <p>Athletes and musicians use Forbes' estimates of 12-month earnings (salary, prize money, endorsements and other income, before tax and fees) from its 2025 highest-paid lists. Executives use total compensation reported in company proxy statements, which is mostly stock awards whose eventual value differs. These are public estimates, not audited figures, and are refreshed when new lists are published. Per-second figures divide the annual estimate evenly across all 31,536,000 seconds of the year.</p>
         <h2>The live counter</h2>

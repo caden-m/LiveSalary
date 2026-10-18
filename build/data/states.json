@@ -9,7 +9,7 @@
       "US Dept. of Labor, Wage and Hour Division, state minimum wage tables, plus Jan 1, 2025 state increase summaries",
       "US Census Bureau, American Community Survey 2024 1-year estimates, median household income (table B19013 / S1901, via CRS report R48943)"
     ],
-    "notes": "Single filers only. Brackets are [upper bound of taxable income, rate] with null for the top bracket, applied after standard_deduction_single. Where a state uses personal exemptions, the exemption is added into standard_deduction_single. Personal credits are not modeled and are listed in note. Where a state has a 0% first bracket, it is either a 0.0 bracket or folded into the deduction for flat states (ID, MS). Federal-conforming deductions use the $15,000 figure Tax Foundation published; the 2025 federal law (OBBBA) raised the federal amount to $15,750 and conforming states may follow it. median_household_income is the ACS 2024 1-year estimate, the latest state-level release available at compile time (2025 1-year estimates not yet found). min_wage is the general statewide rate in effect on Jan 1, 2025 (federal $7.25 where there is no higher state rate). Mid-year changes are listed in note. local_income_tax is true where most residents pay a city, county or school income tax (IN, KY, MD, MI cities, NY/NYC, OH, PA). These are estimates, not filing-grade calculations."
+    "notes": "Single filers only. Brackets are [upper bound of taxable income, rate] with null for the top bracket, applied after standard_deduction_single. Where a state uses personal exemptions, the exemption is added into standard_deduction_single. Personal credits are not modeled and are listed in note. Where a state has a 0% first bracket, it is either a 0.0 bracket or folded into the deduction for flat states (ID, MS). Federal-conforming deductions use the $15,000 figure Tax Foundation published; the 2025 federal law (OBBBA) raised the federal amount to $15,750 and conforming states may follow it. median_household_income is the ACS 2024 1-year estimate, the latest state-level release available at compile time (2025 1-year estimates not yet found). min_wage is the general statewide rate in effect on Jan 1, 2025 (federal $7.25 where there is no higher state rate). Mid-year changes are listed in note. local_income_tax is true where most residents pay a city, county or school income tax (IN, KY, MD, MI cities, NY/NYC, OH, PA). These are estimates, not filing-grade calculations. Re-verified 2026-10-17: OR, ID, MO, AZ, NM, CO, IA, MT, ND deductions corrected; CA, WV, OH, minimum wages confirmed."
   },
   "states": [
     {
@@ -54,7 +54,7 @@
       "slug": "arizona",
       "name": "Arizona",
       "tax_type": "flat",
-      "standard_deduction_single": 15000,
+      "standard_deduction_single": 15750,
       "brackets_single": [
         [
           null,
@@ -64,7 +64,7 @@
       "local_income_tax": false,
       "min_wage": 14.7,
       "median_household_income": 81486,
-      "note": "Flat 2.5%. Arizona's standard deduction matches the federal amount ($15,000 as published for 2025; $15,750 if Arizona adopts the 2025 federal increase)."
+      "note": "Flat 2.5%. Arizona's standard deduction matches the federal amount ($15,000 as published for 2025; $15,750 if Arizona adopts the 2025 federal increase). Uses the 2025 federal standard deduction of $15,750 (2025 Form 140 booklet, per Nov 2025 executive order)."
     },
     {
       "code": "AR",
@@ -141,7 +141,7 @@
       "slug": "colorado",
       "name": "Colorado",
       "tax_type": "flat",
-      "standard_deduction_single": 15000,
+      "standard_deduction_single": 15750,
       "brackets_single": [
         [
           null,
@@ -151,7 +151,7 @@
       "local_income_tax": false,
       "min_wage": 14.81,
       "median_household_income": 97113,
-      "note": "Flat 4.4%, starting from federal taxable income, so the deduction is the federal standard deduction ($15,000 pre-OBBBA; $15,750 if the state follows the 2025 federal increase). Denver, Aurora, Glendale, Greenwood Village and Sheridan levy small monthly occupational privilege taxes (not modeled)."
+      "note": "Flat 4.4%, starting from federal taxable income, so the deduction is the federal standard deduction ($15,000 pre-OBBBA; $15,750 if the state follows the 2025 federal increase). Denver, Aurora, Glendale, Greenwood Village and Sheridan levy small monthly occupational privilege taxes (not modeled). Uses the 2025 federal standard deduction of $15,750 (starts from federal taxable income)."
     },
     {
       "code": "CT",
@@ -371,7 +371,7 @@
       "slug": "idaho",
       "name": "Idaho",
       "tax_type": "flat",
-      "standard_deduction_single": 19811,
+      "standard_deduction_single": 20561,
       "brackets_single": [
         [
           null,
@@ -381,7 +381,7 @@
       "local_income_tax": false,
       "min_wage": 7.25,
       "median_household_income": 81166,
-      "note": "Flat 5.3% for 2025 (cut from 5.695% by HB 40, 2025). Idaho taxes the first $4,811 of taxable income at 0%; that zero bracket is folded into the deduction ($15,000 federal standard deduction + $4,811). Also a $155 grocery credit (not modeled)."
+      "note": "Flat 5.3% for 2025 (cut from 5.695% by HB 40, 2025). Idaho taxes the first $4,811 of taxable income at 0%; that zero bracket is folded into the deduction ($15,000 federal standard deduction + $4,811). Also a $155 grocery credit (not modeled). HB 559 (Feb 2026, retroactive to 2025) adopts the federal $15,750 standard deduction; plus the $4,811 zero bracket."
     },
     {
       "code": "IL",
@@ -422,7 +422,7 @@
       "slug": "iowa",
       "name": "Iowa",
       "tax_type": "flat",
-      "standard_deduction_single": 15000,
+      "standard_deduction_single": 15750,
       "brackets_single": [
         [
           null,
@@ -432,7 +432,7 @@
       "local_income_tax": false,
       "min_wage": 7.25,
       "median_household_income": 75501,
-      "note": "Newly flat 3.8% in 2025. Iowa starts from federal taxable income, so the deduction is the federal standard deduction ($15,000 pre-OBBBA; $15,750 if the state follows the 2025 federal increase). $40 personal credit (not modeled). Many school districts add a surtax on state tax (a few percent of the state tax)."
+      "note": "Newly flat 3.8% in 2025. Iowa starts from federal taxable income, so the deduction is the federal standard deduction ($15,000 pre-OBBBA; $15,750 if the state follows the 2025 federal increase). $40 personal credit (not modeled). Many school districts add a surtax on state tax (a few percent of the state tax). Uses the 2025 federal standard deduction of $15,750 (starts from federal taxable income)."
     },
     {
       "code": "KS",
@@ -656,7 +656,7 @@
       "slug": "missouri",
       "name": "Missouri",
       "tax_type": "progressive",
-      "standard_deduction_single": 15000,
+      "standard_deduction_single": 15750,
       "brackets_single": [
         [
           1313,
@@ -694,14 +694,14 @@
       "local_income_tax": false,
       "min_wage": 13.75,
       "median_household_income": 71589,
-      "note": "Top rate 4.7% for 2025. Missouri's standard deduction equals the federal amount ($15,000 as published; $15,750 after the 2025 federal increase). Kansas City and St. Louis levy a 1% earnings tax on residents and workers. Minimum wage $13.75 from Jan 1, 2025 (Proposition A)."
+      "note": "Top rate 4.7% for 2025. Missouri's standard deduction equals the federal amount ($15,000 as published; $15,750 after the 2025 federal increase). Kansas City and St. Louis levy a 1% earnings tax on residents and workers. Minimum wage $13.75 from Jan 1, 2025 (Proposition A). Uses the 2025 federal standard deduction of $15,750 (2025 Form MO-1040)."
     },
     {
       "code": "MT",
       "slug": "montana",
       "name": "Montana",
       "tax_type": "progressive",
-      "standard_deduction_single": 15000,
+      "standard_deduction_single": 15750,
       "brackets_single": [
         [
           21100,
@@ -715,7 +715,7 @@
       "local_income_tax": false,
       "min_wage": 10.55,
       "median_household_income": 75340,
-      "note": "Montana starts from federal taxable income, so the deduction is the federal standard deduction ($15,000 as published for 2025)."
+      "note": "Montana starts from federal taxable income, so the deduction is the federal standard deduction ($15,000 as published for 2025). Uses the 2025 federal standard deduction of $15,750 (2025 Form 2 instructions)."
     },
     {
       "code": "NE",
@@ -816,7 +816,7 @@
       "slug": "new-mexico",
       "name": "New Mexico",
       "tax_type": "progressive",
-      "standard_deduction_single": 15000,
+      "standard_deduction_single": 15750,
       "brackets_single": [
         [
           5500,
@@ -846,7 +846,7 @@
       "local_income_tax": false,
       "min_wage": 12.0,
       "median_household_income": 67816,
-      "note": "New bracket structure from 2025 (HB 252). Deduction is the federal standard deduction ($15,000 as published)."
+      "note": "New bracket structure from 2025 (HB 252). Deduction is the federal standard deduction ($15,000 as published). Uses the 2025 federal standard deduction of $15,750 (follows the federal amount)."
     },
     {
       "code": "NY",
@@ -919,7 +919,7 @@
       "slug": "north-dakota",
       "name": "North Dakota",
       "tax_type": "progressive",
-      "standard_deduction_single": 15000,
+      "standard_deduction_single": 15750,
       "brackets_single": [
         [
           48475,
@@ -937,7 +937,7 @@
       "local_income_tax": false,
       "min_wage": 7.25,
       "median_household_income": 77871,
-      "note": "Starts from federal taxable income, so the deduction is the federal standard deduction ($15,000 pre-OBBBA; $15,750 if the state follows the 2025 federal increase). The first $48,475 of taxable income is taxed at 0%."
+      "note": "Starts from federal taxable income, so the deduction is the federal standard deduction ($15,000 pre-OBBBA; $15,750 if the state follows the 2025 federal increase). The first $48,475 of taxable income is taxed at 0%. Uses the 2025 federal standard deduction of $15,750 (starts from federal taxable income; not separately confirmed for 2025)."
     },
     {
       "code": "OH",
@@ -1006,14 +1006,14 @@
       "slug": "oregon",
       "name": "Oregon",
       "tax_type": "progressive",
-      "standard_deduction_single": 2800,
+      "standard_deduction_single": 2835,
       "brackets_single": [
         [
           4400,
           0.0475
         ],
         [
-          11050,
+          11100,
           0.0675
         ],
         [
@@ -1028,7 +1028,7 @@
       "local_income_tax": false,
       "min_wage": 14.7,
       "median_household_income": 85220,
-      "note": "Also a personal exemption credit of about $250 (not modeled). Portland-area residents with income over $125,000 pay Metro SHS (1%) and Multnomah County Preschool for All (1.5% and up) taxes. Minimum wage $14.70 standard; $15.05 from July 1, 2025 (Portland metro higher)."
+      "note": "Also a personal exemption credit of about $250 (not modeled). Portland-area residents with income over $125,000 pay Metro SHS (1%) and Multnomah County Preschool for All (1.5% and up) taxes. Minimum wage $14.70 standard; $15.05 from July 1, 2025 (Portland metro higher). 2025 Publication OR-17: $2,835 standard deduction, brackets to $4,400 / $11,100 / $125,000; $256 exemption credit (not modeled) ends above $100k AGI."
     },
     {
       "code": "PA",
