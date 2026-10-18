@@ -16,9 +16,9 @@ No build step, no framework, no backend. Everything is saved only in the visitor
 | `manifest.json` | Web-app manifest so the site can be installed to a home screen. |
 | `sw.js` | Service worker: caches the app shell so it loads instantly and works offline. |
 | `assets/` | Icons and the social preview image, plus the SVG sources they were rendered from. |
-| `build/generate.py`, `build/data/` | Generator for the wage, salary and earner pages (see below). The data files are the only thing to edit when adding a rate, a person or a job. |
-| `hourly/`, `salary/`, `earns/` | **Generated** — don't edit by hand; run the generator instead. |
-| `pages.css`, `counter.js` | Styles and the preloaded live counter used by the generated pages. |
+| `build/generate.py`, `build/data/` | Generator for every page except the home page (see below). The data files are the only thing to edit when adding a rate, a state, a person or a job. |
+| `hourly/`, `salary/`, `monthly/`, `biweekly/`, `earns/`, `about/`, `methodology/`, `privacy/`, `contact/`, `embed/`, `sitemaps/` | **Generated** — don't edit by hand; run the generator instead. |
+| `pages.css`, `counter.js` | Styles and the preloaded live counter used by the generated pages and the embeddable widget. |
 | `robots.txt`, `sitemap.xml` | Tell search engines the site may be indexed and where the page is. Update `lastmod` in the sitemap when the page changes meaningfully. |
 | `assets/fonts/` | Self-hosted Inter and JetBrains Mono (latin subset, variable weight, woff2). Loaded by `@font-face` rules at the top of `styles.css`. |
 | `CNAME` | Tells GitHub Pages to serve the site at `mylivesalary.com`. Don't delete it. |
@@ -56,7 +56,14 @@ Besides the counter, the site has a few hundred static pages aimed at searches l
 python3 build/generate.py
 ```
 
-It reads `build/data/wages.json` (which hourly rates and salaries get a page), `build/data/people.json` (athletes, musicians, executives with estimated annual earnings and sources) and `build/data/occupations.json` (BLS median wages), writes the pages into `hourly/`, `salary/` and `earns/`, and rewrites `sitemap.xml`. Tax assumptions and the US median wage live at the top of the script; update them (and the earnings data) once a year. Commit the regenerated output along with the data change.
+It reads:
+
+- `build/data/wages.json` — which hourly rates, salaries, monthly and biweekly amounts get a page;
+- `build/data/states.json` — 2025 single-filer income tax brackets and deductions, minimum wage and median household income for all 50 states and DC (each wage and salary page gets a sub-page per state, e.g. `/hourly/25/california/`);
+- `build/data/people.json` — athletes, musicians and executives with estimated annual earnings and sources;
+- `build/data/occupations.json` — BLS median wages.
+
+It writes about 14,000 pages (most of them state pages), the About/Methodology/Privacy/Contact pages, the embed page and widget, and `sitemap.xml` as an index of the files in `sitemaps/`. Federal tax brackets, the US median wage and other assumptions live at the top of the script and are documented on `/methodology/`; refresh them, the state data and the earnings data once a year. Commit the regenerated output along with the data change. Set `CONTACT_EMAIL` in the script to show an address on the contact page.
 
 ## Deploying
 

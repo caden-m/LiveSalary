@@ -429,6 +429,10 @@ button { cursor: pointer; }
 .explore strong { font-weight: 500; font-size: 0.92rem; color: var(--fg); }
 .explore span { font-size: 0.8rem; color: var(--fg-3); line-height: 1.4; }
 
+.site-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 18px; margin-top: 22px; }
+.site-links a { font-size: 0.78rem; color: var(--fg-3); text-decoration: none; }
+.site-links a:hover { color: var(--fg); }
+
 /* Section links in the top bar (desktop only; phones get the cards below the fold) */
 .top-links { display: flex; gap: 22px; margin: 10px auto 0; }
 .top-links a { font-size: 0.82rem; color: var(--fg-3); text-decoration: none; transition: color 0.2s; }

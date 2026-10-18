@@ -1,7 +1,7 @@
 /* Live Salary service worker: makes the app installable and usable offline.
    Bump CACHE whenever the site's files change so old caches are dropped. */
 
-const CACHE = 'live-salary-v2.3.1';
+const CACHE = 'live-salary-v2.4.0';
 
 const APP_SHELL = [
     './',
@@ -42,8 +42,10 @@ self.addEventListener('fetch', (event) => {
 
     const url = new URL(request.url);
     if (url.origin !== self.location.origin) return;
-    // The generated wage/salary/earner pages are plentiful and change with each rebuild: leave them to the network.
-    if (/^\/(hourly|salary|earns)\//.test(url.pathname)) return;
+    // Only the app itself is cached. The generated reference pages (hourly/, salary/, earns/, …)
+    // are plentiful and change with each rebuild, so they go straight to the network.
+    const path = url.pathname.replace(/^\//, '') || './';
+    if (!APP_SHELL.includes(path) && !url.pathname.startsWith('/assets/')) return;
 
     const isNavigation = request.mode === 'navigate';
 

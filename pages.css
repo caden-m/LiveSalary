@@ -131,6 +131,49 @@ body.page {
 .compare label { display: flex; align-items: center; gap: 10px; color: var(--fg-3); font-size: 0.9rem; }
 .compare .input-wrap { width: 150px; }
 
+/* Lists in prose pages */
+.page-main ul:not(.ticks) { color: var(--fg-2); line-height: 1.65; padding-left: 1.2em; margin: 0 0 12px; }
+.page-main ul:not(.ticks) li { margin-bottom: 6px; }
+.page-main code { font-family: var(--mono); font-size: 0.88em; padding: 1px 5px; border: 1px solid var(--line); border-radius: 5px; }
+
+/* Embed page */
+.embed-form { display: flex; flex-direction: column; gap: 12px; margin: 0 0 8px; }
+.embed-form input[type="text"] { width: 100%; padding: 0.7em 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); font-family: var(--mono); font-size: 0.95rem; }
+.embed-form input[type="text"]:focus { outline: none; border-color: var(--fg); }
+.check { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--fg-2); }
+.code {
+    margin: 0 0 10px;
+    padding: 14px 16px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--bg-elev);
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: var(--fg);
+    white-space: pre-wrap;
+    word-break: break-all;
+    cursor: copy;
+}
+.code:hover { border-color: var(--fg); }
+
+/* The widget page is framed by other sites: fill the frame, nothing else */
+body.page.bare { padding: 0; min-height: 0; background: var(--bg); }
+body.bare .page-main { padding: 0; max-width: none; }
+.live.widget { margin: 0; border: 0; border-radius: 0; min-height: 100dvh; display: flex; flex-direction: column; justify-content: center; padding: 24px 16px 36px; }
+.live.widget .live-amount { font-size: clamp(2rem, 12vw, 4rem); }
+.widget-brand {
+    position: absolute;
+    right: 12px;
+    bottom: 10px;
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--fg-3) !important;
+    text-decoration: none !important;
+}
+.widget-brand:hover { color: var(--fg) !important; }
+
 .page-foot { max-width: 760px; margin: 56px auto 0; padding-top: 20px; border-top: 1px solid var(--line); font-size: 0.8rem; color: var(--fg-3); }
 .page-foot a { color: var(--fg-2); text-decoration: none; }
 .page-foot a:hover { color: var(--fg); }

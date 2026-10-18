@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-"""Generates the static wage, salary and earner pages plus hub pages and the sitemap.
+"""Generates every static page except the home page, plus the sitemaps.
 
     python3 build/generate.py
 
-Reads build/data/*.json and writes into hourly/, salary/, earns/ at the repo root,
-overwriting what is there. Only the Python standard library is used.
+Reads build/data/*.json and writes into hourly/, salary/, monthly/, biweekly/, earns/, about/,
+methodology/, privacy/, contact/, embed/ and sitemaps/ at the repo root, overwriting what is there.
+Only the Python standard library is used. Tax and wage assumptions live at the top of this file.
 """
 
 import json
 import math
 import os
-import re
 import shutil
 from datetime import date
 from html import escape
@@ -19,6 +19,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, "build", "data")
 SITE = "https://mylivesalary.com"
 TODAY = date.today().isoformat()
+CONTACT_EMAIL = None  # e.g. "hello@mylivesalary.com"; shown on the contact page when set
+REPO_URL = "https://github.com/caden-m/LiveSalary"
 
 # ---------- Assumptions (kept in one place so the copy and the maths agree) ----------
 
@@ -29,31 +31,50 @@ FEDERAL_MIN_WAGE = 7.25
 US_MEDIAN_WEEKLY = 1196                                   # BLS, full-time median usual weekly earnings, Q2 2025
 US_MEDIAN_ANNUAL = US_MEDIAN_WEEKLY * WEEKS_PER_YEAR      # 62,192
 US_MEDIAN_HOURLY = US_MEDIAN_ANNUAL / HOURS_PER_YEAR      # ~29.90
+LIVING_WAGE_SINGLE = 25.0                                 # MIT Living Wage Calculator, single adult, no children, US average, 2025 (approx.)
+US_MEDIAN_HOUSEHOLD_INCOME = 80610                        # Census ACS 2023 1-year, US
 
-# 2025 federal income tax, single filer. Rough take-home only: no state tax, no credits, no 401(k).
+# 2025 federal income tax, single filer. Rough take-home only: no credits, no 401(k), no health premiums.
 STANDARD_DEDUCTION = 15000
 BRACKETS = [(11925, 0.10), (48475, 0.12), (103350, 0.22), (197300, 0.24), (250525, 0.32), (626350, 0.35), (math.inf, 0.37)]
 SS_RATE, SS_CAP = 0.062, 176100
 MEDICARE_RATE, MEDICARE_EXTRA_FROM = 0.0145, 200000
 
+# Everyday price points used for "how long does it take to earn…" (rounded national figures, 2025)
 PRICES = [("a $5 coffee", 5), ("a $15 lunch", 15), ("a $120 pair of sneakers", 120), ("a $999 phone", 999), ("$1,600 in rent", 1600)]
+TYPICAL_RENT = 1600           # national median asking rent, roughly
+TYPICAL_GROCERIES = 450       # single adult, monthly, roughly
 
 
-def federal_tax(gross):
-    taxable = max(0, gross - STANDARD_DEDUCTION)
+def bracket_tax(taxable, brackets):
     tax, lower = 0.0, 0
-    for upper, rate in BRACKETS:
+    for upper, rate in brackets:
+        upper = math.inf if upper is None else upper
         if taxable <= lower:
             break
         tax += (min(taxable, upper) - lower) * rate
         lower = upper
+    return tax
+
+
+def federal_tax(gross):
+    tax = bracket_tax(max(0, gross - STANDARD_DEDUCTION), BRACKETS)
     fica = min(gross, SS_CAP) * SS_RATE + gross * MEDICARE_RATE + max(0, gross - MEDICARE_EXTRA_FROM) * 0.009
     return tax, fica
 
 
-def take_home(gross):
+def take_home(gross, state=None):
+    """Returns (net, federal, fica, state_tax)."""
     tax, fica = federal_tax(gross)
-    return gross - tax - fica, tax, fica
+    st = state_tax(gross, state) if state else 0.0
+    return gross - tax - fica - st, tax, fica, st
+
+
+def state_tax(gross, state):
+    if state["tax_type"] == "none":
+        return 0.0
+    taxable = max(0, gross - state.get("standard_deduction_single", 0))
+    return bracket_tax(taxable, [(b[0], b[1]) for b in state["brackets_single"]])
 
 
 # ---------- Formatting ----------
@@ -70,6 +91,10 @@ def rate_text(h):
 
 def slug_for_rate(h):
     return str(int(h)) if h == int(h) else f"{h:.2f}".rstrip("0").replace(".", "-")
+
+
+def pct(x):
+    return f"{x * 100:.0f}%"
 
 
 def duration(seconds):
@@ -110,18 +135,35 @@ CSP = ("default-src 'none'; script-src 'self' https://gc.zgo.at; style-src 'self
 GOATCOUNTER = ('<script data-goatcounter="https://cadenlivesalary.goatcounter.com/count" async src="https://gc.zgo.at/count.v5.js" '
                'integrity="sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ" crossorigin="anonymous"></script>')
 
+FOOT_NAV = ('<a href="/hourly/">Hourly wages</a> · <a href="/salary/">Salaries</a> · <a href="/monthly/">Monthly pay</a> · '
+            '<a href="/biweekly/">Biweekly pay</a> · <a href="/earns/">Who earns what</a> · <a href="/embed/">Embed</a> · '
+            '<a href="/about/">About</a> · <a href="/methodology/">Methodology</a> · <a href="/privacy/">Privacy</a> · <a href="/contact/">Contact</a>')
 
-def shell(*, path, title, description, body, breadcrumbs, json_ld=None):
+
+def shell(*, path, title, description, body, breadcrumbs, json_ld=None, bare=False, extra_head=""):
     url = f"{SITE}{path}"
-    crumbs_ld = {
-        "@context": "https://schema.org", "@type": "BreadcrumbList",
-        "itemListElement": [{"@type": "ListItem", "position": i + 1, "name": n, "item": f"{SITE}{p}"} for i, (n, p) in enumerate(breadcrumbs)]
-    }
-    ld_blocks = [crumbs_ld] + ([json_ld] if json_ld else [])
-    ld_html = "\n".join(f'<script type="application/ld+json">{json.dumps(b, ensure_ascii=False)}</script>' for b in ld_blocks)
+    ld_blocks = []
+    if breadcrumbs:
+        ld_blocks.append({
+            "@context": "https://schema.org", "@type": "BreadcrumbList",
+            "itemListElement": [{"@type": "ListItem", "position": i + 1, "name": n, "item": f"{SITE}{p}"} for i, (n, p) in enumerate(breadcrumbs)]
+        })
+    if json_ld:
+        ld_blocks.append(json_ld)
+    ld_html = "\n    ".join(f'<script type="application/ld+json">{json.dumps(b, ensure_ascii=False)}</script>' for b in ld_blocks)
     crumbs_html = " <span class=\"sep\">/</span> ".join(
         f'<a href="{escape(p)}">{escape(n)}</a>' if i < len(breadcrumbs) - 1 else f"<span>{escape(n)}</span>"
         for i, (n, p) in enumerate(breadcrumbs))
+    header = "" if bare else f"""
+    <header class="page-top">
+        <a class="brand" href="/">Live Salary</a>
+        <nav class="crumbs" aria-label="Breadcrumb">{crumbs_html}</nav>
+    </header>"""
+    footer = "" if bare else f"""
+    <footer class="page-foot">
+        <nav aria-label="Site">{FOOT_NAV}</nav>
+        <p>Figures are estimates for a single filer based on {HOURS_PER_WEEK} hours a week, {WEEKS_PER_YEAR} weeks a year — see the <a href="/methodology/">methodology</a>. Not tax or financial advice. Updated {TODAY}.</p>
+    </footer>"""
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -145,22 +187,12 @@ def shell(*, path, title, description, body, breadcrumbs, json_ld=None):
     <link rel="stylesheet" href="/styles.css">
     <link rel="stylesheet" href="/pages.css">
     <script src="/theme.js"></script>
-    {ld_html}
+    {ld_html}{extra_head}
 </head>
-<body class="page">
-    <header class="page-top">
-        <a class="brand" href="/">Live Salary</a>
-        <nav class="crumbs" aria-label="Breadcrumb">{crumbs_html}</nav>
-    </header>
+<body class="page{' bare' if bare else ''}">{header}
     <main class="page-main">
 {body}
-    </main>
-    <footer class="page-foot">
-        <nav aria-label="Explore">
-            <a href="/hourly/">Hourly wages</a> · <a href="/salary/">Salaries</a> · <a href="/earns/">Who earns what</a> · <a href="/">Live counter</a>
-        </nav>
-        <p>Figures are estimates for a single filer with no state income tax, based on {HOURS_PER_WEEK} hours a week, {WEEKS_PER_YEAR} weeks a year. Not financial advice.</p>
-    </footer>
+    </main>{footer}
     <script src="/counter.js"></script>
     {GOATCOUNTER}
 </body>
@@ -188,26 +220,25 @@ def counter_block(hourly, *, label, mode="session"):
         </section>"""
 
 
-def breakdown_table(hourly):
+def breakdown_table(hourly, state=None):
     annual = hourly * HOURS_PER_YEAR
-    net, tax, fica = take_home(annual)
-    rows = [
-        ("Per year", annual, net),
-        ("Per month", annual / 12, net / 12),
-        ("Every two weeks", hourly * HOURS_PER_WEEK * 2, net / 26),
-        ("Per week", hourly * HOURS_PER_WEEK, net / 52),
-        ("Per day (8 hours)", hourly * 8, net / 260),
-        ("Per hour", hourly, net / HOURS_PER_YEAR),
-    ]
-    body = "\n".join(f"<tr><th scope=\"row\">{p}</th><td>{money(g, cents=g < 100)}</td><td>{money(n, cents=n < 100)}</td></tr>" for p, g, n in rows)
+    net, tax, fica, st = take_home(annual, state)
+    periods = [("Per year", 1), ("Per month", 12), ("Every two weeks", 26), ("Per week", 52), ("Per day (8 hours)", 260), ("Per hour", HOURS_PER_YEAR)]
+    rows = "\n".join(
+        f"<tr><th scope=\"row\">{p}</th><td>{money(annual / d, cents=annual / d < 100)}</td><td>{money(net / d, cents=net / d < 100)}</td></tr>"
+        for p, d in periods)
+    where = f" in {state['name']}" if state else ""
+    taxes = f"federal income tax ({money(tax)}), Social Security and Medicare ({money(fica)})"
+    if state:
+        taxes += f" and {state['name']} income tax ({money(st)})" if st > 0 else f"; {state['name']} has no state income tax on wages"
     return f"""
         <table class="grid">
-            <thead><tr><th scope="col">Period</th><th scope="col">Before tax</th><th scope="col">After federal tax*</th></tr></thead>
+            <thead><tr><th scope="col">Period</th><th scope="col">Before tax</th><th scope="col">After tax*</th></tr></thead>
             <tbody>
-{body}
+{rows}
             </tbody>
         </table>
-        <p class="fine">*Rough estimate for a single filer in 2025: standard deduction, federal income tax and Social Security/Medicare only — about {money(tax + fica)} a year in this case. State and local taxes, health insurance and retirement contributions would lower it further.</p>"""
+        <p class="fine">*Estimate for a single filer in 2025 taking the standard deduction{where}: {taxes} — about {money(tax + fica + st)} a year, an effective rate of {pct((tax + fica + st) / annual) if annual else '0%'}. {'Local income taxes, ' if state and state.get('local_income_tax') else ''}Health insurance, retirement contributions and credits would change it. <a href="/methodology/">How this is calculated.</a></p>"""
 
 
 def hours_table(hourly):
@@ -238,21 +269,84 @@ def context_paragraph(hourly):
             f"({money(US_MEDIAN_ANNUAL)} a year).</p>")
 
 
+def is_it_good_section(hourly, occupations, *, label=None):
+    """Answers the question behind the search: is this pay good, what jobs pay it, what does the budget feel like."""
+    label = label or f"{rate_text(hourly)} an hour"
+    annual = hourly * HOURS_PER_YEAR
+    net, *_ = take_home(annual)
+    net_month = net / 12
+    ratio = hourly / US_MEDIAN_HOURLY
+    if hourly < FEDERAL_MIN_WAGE:
+        verdict = "below the federal minimum wage, so it's only legal in limited cases such as tipped work, some students and trainees"
+    elif ratio < 0.6:
+        verdict = "well below the US median — a typical entry-level or part-time wage"
+    elif ratio < 0.9:
+        verdict = "below the US median, in the range of many service, retail and early-career jobs"
+    elif ratio < 1.1:
+        verdict = "right around the US median full-time wage"
+    elif ratio < 1.5:
+        verdict = "comfortably above the US median — typical of skilled trades and experienced professionals"
+    elif ratio < 3:
+        verdict = "well above the US median, in the range of senior professionals and many managers"
+    else:
+        verdict = "far above the US median — top-percentile pay"
+    living = ("above" if hourly >= LIVING_WAGE_SINGLE * 1.02 else "below" if hourly <= LIVING_WAGE_SINGLE * 0.98 else "right at")
+    rent_share = TYPICAL_RENT / net_month if net_month > 0 else math.inf
+    if rent_share > 1:
+        rent_line = f"a typical {money(TYPICAL_RENT)} rent is more than the whole month's take-home, so this wage alone can't cover a one-bedroom at national prices."
+    elif rent_share > 0.5:
+        rent_line = f"a typical {money(TYPICAL_RENT)} rent would take about {pct(rent_share)} of take-home — far above the 30% most budgets aim for, so roommates, a cheaper area or a second income are usually part of the picture."
+    elif rent_share > 0.3:
+        rent_line = f"a typical {money(TYPICAL_RENT)} rent would take about {pct(rent_share)} of take-home — above the 30% guideline, workable with a careful budget."
+    else:
+        rent_line = f"a typical {money(TYPICAL_RENT)} rent would take about {pct(rent_share)} of take-home, under the 30% guideline, leaving room to save."
+    left = net_month - TYPICAL_RENT - TYPICAL_GROCERIES
+    left_line = (f"After rent and about {money(TYPICAL_GROCERIES)} of groceries, roughly <strong>{money(left)}</strong> a month is left for everything else: transport, insurance, phone, debt, savings."
+                 if left > 0 else "After rent and groceries there is nothing left at national prices; the numbers only work with lower housing costs or additional income.")
+
+    # Jobs that pay about this much (median), from the occupations data.
+    near = sorted(occupations, key=lambda o: abs(o["annual"] / HOURS_PER_YEAR - hourly))
+    close = [o for o in near if abs(o["annual"] / HOURS_PER_YEAR - hourly) / hourly <= 0.15][:4] or near[:3]
+    jobs = ", ".join(f'<a href="/earns/{o["slug"]}/">{o["plural"]}</a> ({money(o["annual"] / HOURS_PER_YEAR, cents=True)}/hr)' for o in close)
+    jobs_intro = "Jobs whose median pay is close to this" if close is not near[:3] or abs(close[0]["annual"] / HOURS_PER_YEAR - hourly) / hourly <= 0.15 else "The nearest everyday jobs by median pay"
+
+    return f"""
+        <h2>Is {label} good?</h2>
+        <p>{label.capitalize()} is <strong>{verdict}</strong>. It's {living} the roughly ${LIVING_WAGE_SINGLE:.0f} an hour that MIT's Living Wage Calculator estimates a single adult with no children needs on average in the US.</p>
+        <p>In practice it means about <strong>{money(net_month)} a month</strong> after federal taxes. At that level {rent_line} {left_line}</p>
+        <p>{jobs_intro}: {jobs}.</p>"""
+
+
 def neighbours(values, current, fmt, hub, count=6):
     idx = values.index(current)
     near = values[max(0, idx - count // 2): idx] + values[idx + 1: idx + 1 + count // 2]
     return "".join(f'<a href="{hub}{fmt(v)[1]}/">{fmt(v)[0]}</a>' for v in near)
 
 
+def state_links(base_path, states):
+    if not states:
+        return ""
+    chips = "".join(f'<a href="{base_path}{s["slug"]}/">{escape(s["name"])}</a>' for s in states)
+    return f"""
+        <h2>After taxes in your state</h2>
+        <p>State income tax ranges from nothing to over 10%. Pick a state for the full take-home picture:</p>
+        <nav class="chips">{chips}</nav>"""
+
+
+def webpage_ld(title, description, path):
+    return {"@context": "https://schema.org", "@type": "WebPage", "name": title, "description": description, "url": SITE + path,
+            "isPartOf": {"@type": "WebSite", "name": "Live Salary", "url": SITE + "/"}, "dateModified": TODAY}
+
+
 # ---------- Hourly pages ----------
 
-def hourly_page(h, all_hourly, annual_values):
+def hourly_page(h, all_hourly, annual_values, occupations, states):
     annual = h * HOURS_PER_YEAR
     path = f"/hourly/{slug_for_rate(h)}/"
     title = f"{rate_text(h)} an Hour Is How Much a Year? {money(annual)} | Live Salary"
-    net, _, _ = take_home(annual)
+    net, *_ = take_home(annual)
     description = (f"{rate_text(h)} an hour is {money(annual)} a year before tax (about {money(net)} after federal tax), "
-                   f"{money(annual / 12)} a month or {money(h * HOURS_PER_WEEK)} a week — plus a live counter showing it add up.")
+                   f"{money(annual / 12)} a month or {money(h * HOURS_PER_WEEK)} a week. Is it good? What jobs pay it? Plus a live counter.")
     closest_salary = min(annual_values, key=lambda a: abs(a - annual))
     body = f"""
         <h1>{rate_text(h)} an hour is <span class="hl">{money(annual)}</span> a year</h1>
@@ -260,6 +354,7 @@ def hourly_page(h, all_hourly, annual_values):
 {counter_block(h, label=f"Earning {rate_text(h)}/hr since you opened this page")}
         <h2>{rate_text(h)} an hour, broken down</h2>
 {breakdown_table(h)}
+{is_it_good_section(h, occupations)}
         <h2>How it compares</h2>
 {context_paragraph(h)}
         <h2>Fewer or more hours</h2>
@@ -268,25 +363,25 @@ def hourly_page(h, all_hourly, annual_values):
         <h2>How long does it take to earn…</h2>
         <p>At {rate_text(h)} an hour you earn about <strong>{money(h / 60, cents=True)} a minute</strong>, so it takes:</p>
 {time_to_earn_list(h)}
+{state_links(path, states)}
         <h2>Nearby wages</h2>
         <nav class="chips">{neighbours(all_hourly, h, lambda v: (rate_text(v) + "/hr", slug_for_rate(v)), "/hourly/")}</nav>
         <p>Or flip it around: <a href="/salary/{closest_salary}/">{money(closest_salary)} a year is how much an hour?</a></p>
 """
-    ld = {"@context": "https://schema.org", "@type": "WebPage", "name": title, "description": description, "url": SITE + path}
-    write(path, shell(path=path, title=title, description=description, body=body, json_ld=ld,
+    write(path, shell(path=path, title=title, description=description, body=body, json_ld=webpage_ld(title, description, path),
                       breadcrumbs=[("Live Salary", "/"), ("Hourly wages", "/hourly/"), (f"{rate_text(h)} an hour", path)]))
     return path
 
 
 # ---------- Salary pages ----------
 
-def salary_page(a, all_annual, hourly_values):
+def salary_page(a, all_annual, hourly_values, occupations, states):
     h = a / HOURS_PER_YEAR
     path = f"/salary/{a}/"
     title = f"{money(a)} a Year Is How Much an Hour? {money(h, cents=True)} | Live Salary"
-    net, _, _ = take_home(a)
+    net, *_ = take_home(a)
     description = (f"{money(a)} a year is {money(h, cents=True)} an hour at {HOURS_PER_WEEK} hours a week — {money(a / 12)} a month, "
-                   f"{money(a / 26)} every two weeks, about {money(net)} a year after federal tax. See it add up live.")
+                   f"{money(a / 26)} every two weeks, about {money(net)} after federal tax. Is it a good salary? See it add up live.")
     closest_hourly = min(hourly_values, key=lambda v: abs(v - h))
     body = f"""
         <h1>{money(a)} a year is <span class="hl">{money(h, cents=True)}</span> an hour</h1>
@@ -294,6 +389,7 @@ def salary_page(a, all_annual, hourly_values):
 {counter_block(h, label=f"Earning {money(a)}/yr since you opened this page")}
         <h2>{money(a)} a year, broken down</h2>
 {breakdown_table(h)}
+{is_it_good_section(h, occupations, label=f"{money(a)} a year")}
         <h2>How it compares</h2>
 {context_paragraph(h)}
         <h2>If you work different hours</h2>
@@ -307,19 +403,121 @@ def salary_page(a, all_annual, hourly_values):
         <h2>How long does it take to earn…</h2>
         <p>On {money(a)} a year you earn about <strong>{money(h / 60, cents=True)} a minute</strong> while working, so it takes:</p>
 {time_to_earn_list(h)}
+{state_links(path, states)}
         <h2>Nearby salaries</h2>
         <nav class="chips">{neighbours(all_annual, a, lambda v: (money(v), str(v)), "/salary/")}</nav>
         <p>Or flip it around: <a href="/hourly/{slug_for_rate(closest_hourly)}/">{rate_text(closest_hourly)} an hour is how much a year?</a></p>
 """
-    ld = {"@context": "https://schema.org", "@type": "WebPage", "name": title, "description": description, "url": SITE + path}
-    write(path, shell(path=path, title=title, description=description, body=body, json_ld=ld,
+    write(path, shell(path=path, title=title, description=description, body=body, json_ld=webpage_ld(title, description, path),
                       breadcrumbs=[("Live Salary", "/"), ("Salaries", "/salary/"), (f"{money(a)} a year", path)]))
+    return path
+
+
+# ---------- Monthly and biweekly pages ----------
+
+def period_page(amount, kind, all_values, annual_values, occupations):
+    per_year = 12 if kind == "monthly" else 26
+    annual = amount * per_year
+    h = annual / HOURS_PER_YEAR
+    noun = "a month" if kind == "monthly" else "every two weeks"
+    hub_name = "Monthly pay" if kind == "monthly" else "Biweekly pay"
+    path = f"/{kind}/{amount}/"
+    title = f"{money(amount)} {'a Month' if kind == 'monthly' else 'Biweekly'} Is How Much a Year? {money(annual)} ({money(h, cents=True)}/hr) | Live Salary"
+    net, *_ = take_home(annual)
+    description = (f"{money(amount)} {noun} is {money(annual)} a year, or {money(h, cents=True)} an hour at {HOURS_PER_WEEK} hours a week — "
+                   f"about {money(net / per_year)} {noun} after federal tax. Is it good pay? See it add up live.")
+    closest_salary = min(annual_values, key=lambda a: abs(a - annual))
+    other_kind = "biweekly" if kind == "monthly" else "monthly"
+    other_amount = annual / (26 if kind == "monthly" else 12)
+    body = f"""
+        <h1>{money(amount)} {noun} is <span class="hl">{money(annual)}</span> a year</h1>
+        <p class="lede">That works out to <strong>{money(h, cents=True)} an hour</strong> on a {HOURS_PER_WEEK}-hour week — {money(other_amount)} {'every two weeks' if kind == 'monthly' else 'a month'}, and about {money(net / per_year)} {noun} after federal taxes.</p>
+{counter_block(h, label=f"Earning {money(amount)} {noun} since you opened this page")}
+        <h2>{money(amount)} {noun}, broken down</h2>
+{breakdown_table(h)}
+{is_it_good_section(h, occupations, label=f"{money(amount)} {noun}")}
+        <h2>How it compares</h2>
+{context_paragraph(h)}
+        <h2>Nearby amounts</h2>
+        <nav class="chips">{neighbours(all_values, amount, lambda v: (money(v), str(v)), f"/{kind}/")}</nav>
+        <p>See the full picture for <a href="/salary/{closest_salary}/">{money(closest_salary)} a year</a>, including take-home by state.</p>
+"""
+    write(path, shell(path=path, title=title, description=description, body=body, json_ld=webpage_ld(title, description, path),
+                      breadcrumbs=[("Live Salary", "/"), (hub_name, f"/{kind}/"), (f"{money(amount)} {noun}", path)]))
+    return path
+
+
+# ---------- State pages ----------
+
+def state_tax_table(state):
+    note = (" " + escape(state["note"])) if state.get("note") else ""
+    ded = state.get("standard_deduction_single") or 0
+    ded_text = f" after a {money(ded)} standard deduction" if ded else ""
+    if state["tax_type"] == "none":
+        return f"<p>{state['name']} does not tax wage income.{note}</p>"
+    if state["tax_type"] == "flat":
+        rate = state["brackets_single"][0][1]
+        return f"<p>{state['name']} has a <strong>flat {rate * 100:.2f}%</strong> income tax{ded_text}.{note}</p>"
+    rows, lower = [], 0
+    for upper, rate in state["brackets_single"]:
+        rng = f"{money(lower)} – {money(upper)}" if upper else f"over {money(lower)}"
+        rows.append(f"<tr><th scope=\"row\">{rng}</th><td>{rate * 100:.2f}%</td></tr>")
+        lower = upper or lower
+    return f"""
+        <p>{state['name']} uses progressive brackets on taxable income{ded_text}.{note}</p>
+        <table class="grid">
+            <thead><tr><th scope="col">Taxable income (single)</th><th scope="col">Rate</th></tr></thead>
+            <tbody>
+{chr(10).join(rows)}
+            </tbody>
+        </table>"""
+
+
+def state_page(kind, value, state, states, occupations):
+    """kind is 'hourly' or 'salary'; value is the rate or the annual amount."""
+    if kind == "hourly":
+        h, annual = value, value * HOURS_PER_YEAR
+        amount_text, amount_title = f"{rate_text(h)} an hour", f"{rate_text(h)} an Hour"
+        parent_path, parent_name = f"/hourly/{slug_for_rate(h)}/", f"{rate_text(h)} an hour"
+    else:
+        annual, h = value, value / HOURS_PER_YEAR
+        amount_text, amount_title = f"{money(annual)} a year", f"{money(annual)} a Year"
+        parent_path, parent_name = f"/salary/{annual}/", f"{money(annual)} a year"
+    path = f"{parent_path}{state['slug']}/"
+    net, fed, fica, st = take_home(annual, state)
+    net_us, *_ = take_home(annual)
+    name = state["name"]
+    title = f"{amount_title} After Taxes in {name}: {money(net)} Take-Home ({money(net / 12)}/month) | Live Salary"
+    description = (f"{amount_text.capitalize()} in {name} is about {money(net)} a year after federal and state taxes — {money(net / 12)} a month, "
+                   f"{money(net / 26)} every two weeks. {name} income tax: {money(st)}. Compared with the state minimum wage and median income.")
+    vs_min = h / state["min_wage"]
+    mhi = state.get("median_household_income")
+    mhi_line = (f" The median <em>household</em> income in {name} is about {money(mhi)} (US: {money(US_MEDIAN_HOUSEHOLD_INCOME)}), so {amount_text} from one earner is "
+                f"{pct(annual / mhi)} of a typical household's income here." if mhi else "")
+    local = f" Many {name} residents also pay a local income tax on top of this, which isn't included." if state.get("local_income_tax") else ""
+    body = f"""
+        <h1>{amount_text.capitalize()} in {name} is about <span class="hl">{money(net)}</span> after taxes</h1>
+        <p class="lede">{money(annual)} a year before tax becomes roughly <strong>{money(net / 12)} a month</strong> in {name} after federal income tax, Social Security, Medicare and {name} state income tax{' (which is zero)' if st == 0 else f' of {money(st)}'}.{local}</p>
+{counter_block(h, label=f"Earning {amount_text} since you opened this page")}
+        <h2>Take-home pay in {name}</h2>
+{breakdown_table(h, state)}
+        <h2>{name} income tax on {amount_text}</h2>
+{state_tax_table(state)}
+        <p>Compared with a state with no income tax, living in {name} {'costs about ' + money(st) + ' a year on this income — ' + money(st / 12) + ' a month' if st > 0 else 'costs nothing extra in state income tax'}. Nationally (federal taxes only), take-home would be {money(net_us)}.</p>
+        <h2>How {amount_text} compares in {name}</h2>
+        <p>{amount_text.capitalize()} is <strong>{vs_min:.1f}×</strong> the {name} minimum wage of {rate_text(state['min_wage'])}{' (the federal rate)' if state['min_wage'] == FEDERAL_MIN_WAGE else ''} and {('above' if h > US_MEDIAN_HOURLY * 1.02 else 'below' if h < US_MEDIAN_HOURLY * 0.98 else 'right at')} the national median full-time wage of ${US_MEDIAN_HOURLY:.2f} an hour.{mhi_line}</p>
+        <h2>Other states</h2>
+        <nav class="chips">{''.join(f'<a href="{parent_path}{s["slug"]}/">{escape(s["name"])}</a>' for s in states if s["slug"] != state["slug"])}</nav>
+        <p>Back to <a href="{parent_path}">{parent_name} nationally</a>.</p>
+"""
+    write(path, shell(path=path, title=title, description=description, body=body, json_ld=webpage_ld(title, description, path),
+                      breadcrumbs=[("Live Salary", "/"), ("Hourly wages" if kind == "hourly" else "Salaries", f"/{kind}/"), (parent_name, parent_path), (name, path)]))
     return path
 
 
 # ---------- Earner pages (people and occupations) ----------
 
-def earner_page(e, kind, source, all_earners):
+def earner_page(e, kind, source, all_earners, occupations):
     annual = e["annual"]
     per_second = annual / (365 * 24 * 3600)
     per_hour_working = annual / HOURS_PER_YEAR
@@ -338,7 +536,7 @@ def earner_page(e, kind, source, all_earners):
     else:
         title = f"How Much Does a {name} Make Per Hour, Day and Year? | Live Salary"
         description = (f"The median {name.lower()} in the US earns about {money(annual)} a year — roughly {money(per_hour_working, cents=True)} an hour, "
-                       f"{money(annual / 12)} a month. See it add up second by second.")
+                       f"{money(annual / 12)} a month. Is it good pay? See it add up second by second.")
         h1 = f"A {name.lower()} earns about <span class=\"hl\">{money(per_hour_working, cents=True)}</span> an hour"
         lede = (f"The median annual wage for {e['plural']} in the US is about <strong>{money(annual)}</strong> ({source}). Over a standard "
                 f"{HOURS_PER_WEEK}-hour week that works out to {money(per_hour_working, cents=True)} an hour, {money(annual / 12)} a month, or {money(per_hour_working * 8)} a day.")
@@ -347,7 +545,6 @@ def earner_page(e, kind, source, all_earners):
     rate_for_counter = per_second * 3600 if is_person else per_hour_working
     median_time = duration(US_MEDIAN_ANNUAL / per_second) if is_person else None
 
-    extras = ""
     if is_person:
         extras = f"""
         <h2>Compared with a typical salary</h2>
@@ -375,16 +572,19 @@ def earner_page(e, kind, source, all_earners):
         </table>
         <p class="fine">Source: {escape(e.get('source', source))}. Earnings are estimates before tax, agents' fees and expenses; they change every year.</p>"""
     else:
+        closest_hourly_slug = slug_for_rate(min(HOURLY_VALUES, key=lambda v: abs(v - per_hour_working)))
         extras = f"""
         <h2>{name} pay, broken down</h2>
 {breakdown_table(per_hour_working)}
+{is_it_good_section(per_hour_working, [o for o in occupations if o["slug"] != e["slug"]], label=f"{money(annual)} a year")}
         <h2>How it compares</h2>
 {context_paragraph(per_hour_working)}
         <h2>How long does a {name.lower()} work to earn…</h2>
 {time_to_earn_list(per_hour_working)}
+        <p>See <a href="/hourly/{closest_hourly_slug}/">what {rate_text(min(HOURLY_VALUES, key=lambda v: abs(v - per_hour_working)))} an hour earns by state</a>.</p>
         <p class="fine">Source: {escape(source)}. Half of {e['plural']} earn more than the median and half earn less; pay varies a lot by state, employer and experience.</p>"""
 
-    others = "".join(f'<a href="/earns/{o["slug"]}/">{escape(o["name"])}</a>' for o in all_earners if o["slug"] != e["slug"])[:12 * 200]
+    others = "".join(f'<a href="/earns/{o["slug"]}/">{escape(o["name"])}</a>' for o in all_earners if o["slug"] != e["slug"])
     body = f"""
         <h1>{h1}</h1>
         <p class="lede">{lede}</p>
@@ -393,57 +593,245 @@ def earner_page(e, kind, source, all_earners):
         <h2>More earners</h2>
         <nav class="chips">{others}</nav>
 """
-    ld = {"@context": "https://schema.org", "@type": "WebPage", "name": title, "description": description, "url": SITE + path}
-    write(path, shell(path=path, title=title, description=description, body=body, json_ld=ld,
+    write(path, shell(path=path, title=title, description=description, body=body, json_ld=webpage_ld(title, description, path),
                       breadcrumbs=[("Live Salary", "/"), ("Who earns what", "/earns/"), (name, path)]))
     return path
 
 
-# ---------- Hubs ----------
+# ---------- Hubs and static pages ----------
 
 def hub(path, title, description, h1, lede, sections, crumb):
     body = f"<h1>{h1}</h1>\n<p class=\"lede\">{lede}</p>\n" + "\n".join(sections)
-    write(path, shell(path=path, title=title, description=description, body=body,
+    write(path, shell(path=path, title=title, description=description, body=body, json_ld=webpage_ld(title, description, path),
                       breadcrumbs=[("Live Salary", "/"), (crumb, path)]))
     return path
 
 
+def static_page(path, title, description, body, crumb):
+    write(path, shell(path=path, title=title, description=description, body=body, json_ld=webpage_ld(title, description, path),
+                      breadcrumbs=[("Live Salary", "/"), (crumb, path)]))
+    return path
+
+
+def trust_pages(people, occupations, states):
+    paths = []
+    contact_line = (f'<p>Email <a href="mailto:{CONTACT_EMAIL}">{CONTACT_EMAIL}</a>.</p>' if CONTACT_EMAIL else "")
+    paths.append(static_page("/about/", "About Live Salary", "Who makes Live Salary, why it exists, and how it is funded.",
+        f"""
+        <h1>About Live Salary</h1>
+        <p class="lede">Live Salary started in 2024 as a one-page toy: type your hourly rate, press Start, and watch the money count up. It turns out watching your pay arrive second by second changes how an hour feels — and makes abstract numbers like "$25 an hour" or "$275 million a year" suddenly concrete.</p>
+        <h2>What's here</h2>
+        <p>The <a href="/">live counter</a> is the heart of the site. Around it are pages that answer the questions people actually type into a search box: <a href="/hourly/">what an hourly wage adds up to over a year</a>, <a href="/salary/">what a salary works out to per hour</a>, what's left <a href="/hourly/25/">after taxes in each state</a>, and <a href="/earns/">how fast the highest-paid people on earth earn</a> compared with everyday jobs. Every page has the counter preloaded with that rate.</p>
+        <h2>Who makes it</h2>
+        <p>Live Salary is made and maintained by Caden, an independent developer in the United States, with help from AI tools for code and research. There's no company behind it. The code is open at <a href="{REPO_URL}">GitHub</a>.</p>
+        <h2>How it's funded</h2>
+        <p>Right now it isn't. The site may carry a small number of ads on the reference pages in future; the counter itself will stay ad-free. There are no sponsored figures, affiliate placements or paid rankings on any page.</p>
+        <h2>Accuracy</h2>
+        <p>Every number on the site is computed from stated assumptions and public data; the <a href="/methodology/">methodology page</a> lists them with sources and dates. If something looks wrong, <a href="/contact/">say so</a> — corrections ship within days.</p>
+        {contact_line}""", "About"))
+    paths.append(static_page("/methodology/", "Methodology: How Live Salary Calculates Pay, Taxes and Comparisons",
+        "Every assumption behind the numbers on Live Salary: hours per year, 2025 federal and state tax estimates, data sources for wages, celebrities and occupations.",
+        f"""
+        <h1>Methodology</h1>
+        <p class="lede">Every figure on this site is calculated, not copied. This page lists the assumptions and data behind them so you can judge how well they fit your situation.</p>
+        <h2>Working time</h2>
+        <p>Annual pay from an hourly rate assumes <strong>{HOURS_PER_WEEK} hours a week for {WEEKS_PER_YEAR} weeks = {HOURS_PER_YEAR:,} hours a year</strong>, with no unpaid time off. Monthly figures divide the year by 12; biweekly by 26; weekly by 52; daily by 260 working days. Each page also shows the result for 20–50 hour weeks.</p>
+        <h2>Federal taxes (2025, single filer)</h2>
+        <p>Take-home estimates subtract three things from gross pay:</p>
+        <ul>
+            <li><strong>Federal income tax</strong> using the 2025 brackets for a single filer after the {money(STANDARD_DEDUCTION)} standard deduction: {', '.join(f'{r * 100:.0f}% to {money(u)}' for u, r in BRACKETS[:-1])}, then 37%.</li>
+            <li><strong>Social Security</strong> at {SS_RATE * 100:.1f}% of wages up to {money(SS_CAP)}.</li>
+            <li><strong>Medicare</strong> at {MEDICARE_RATE * 100:.2f}%, plus 0.9% on wages over {money(MEDICARE_EXTRA_FROM)}.</li>
+        </ul>
+        <p>Not included: tax credits, itemized deductions, 401(k) or HSA contributions, health insurance premiums, filing jointly, dependants. Real take-home is usually a little higher for people with pre-tax benefits and credits, and lower for people with local taxes.</p>
+        <h2>State taxes</h2>
+        <p>State pages add state income tax for tax year {states['_meta']['tax_year'] if states else 2025} using each state's single-filer brackets and standard deduction (or the closest equivalent where a state uses exemptions or credits instead). Local and city income taxes are not included; pages for states where they are common say so. Source: state revenue departments and the Tax Foundation's annual state tax survey{'; compiled ' + states['_meta']['compiled'] if states else ''}. Treat these as estimates good to a few hundred dollars a year, not a filing calculation.</p>
+        <h2>Comparisons</h2>
+        <ul>
+            <li><strong>Federal minimum wage:</strong> ${FEDERAL_MIN_WAGE} an hour (unchanged since 2009). State pages use the state minimum in effect in 2025.</li>
+            <li><strong>US median wage:</strong> {money(US_MEDIAN_WEEKLY)} a week for full-time workers (BLS, median usual weekly earnings, Q2 2025), treated as {money(US_MEDIAN_ANNUAL)} a year or ${US_MEDIAN_HOURLY:.2f} an hour.</li>
+            <li><strong>Living wage:</strong> about ${LIVING_WAGE_SINGLE:.0f} an hour for a single adult with no children, the approximate national average from MIT's Living Wage Calculator (2025). Local living wages vary from the mid-teens to over $30.</li>
+            <li><strong>Median household income:</strong> {money(US_MEDIAN_HOUSEHOLD_INCOME)} nationally (Census ACS 2023); state figures on state pages. Household income usually combines more than one earner, so it is not directly comparable with one person's pay.</li>
+            <li><strong>Budget illustrations:</strong> {money(TYPICAL_RENT)} rent (roughly the national median asking rent) and {money(TYPICAL_GROCERIES)} a month of groceries for one adult. Your costs will differ; the point is scale, not precision.</li>
+        </ul>
+        <h2>Occupation pay</h2>
+        <p>Median annual wages for occupations come from the US Bureau of Labor Statistics Occupational Employment and Wage Statistics (May 2024), rounded. "Median" means half of workers in that job earn more and half earn less; pay varies widely by state, employer and experience.</p>
+        <h2>Celebrity and executive earnings</h2>
+        <p>Athletes and musicians use Forbes' estimates of 12-month earnings (salary, prize money, endorsements and other income, before tax and fees) from its 2025 highest-paid lists. Executives use total compensation reported in company proxy statements, which is mostly stock awards whose eventual value differs. These are public estimates, not audited figures, and are refreshed when new lists are published. Per-second figures divide the annual estimate evenly across all 31,536,000 seconds of the year.</p>
+        <h2>The live counter</h2>
+        <p>The counter multiplies the chosen rate by the exact time elapsed, so it stays correct even if your device slows down or the tab is hidden. It never rounds up: the large digits show whole cents, the small digits show the next two decimal places.</p>
+        <h2>Updates and corrections</h2>
+        <p>Assumptions are reviewed when new tax brackets, BLS wage data or Forbes lists are published, normally once a year. Pages show their last update date in the footer. Found an error? <a href="/contact/">Let me know</a>.</p>""", "Methodology"))
+    paths.append(static_page("/privacy/", "Privacy Policy | Live Salary", "What Live Salary stores (your settings, in your browser only) and what it doesn't (anything about you).",
+        f"""
+        <h1>Privacy</h1>
+        <p class="lede">Live Salary is built so that it has almost nothing to know about you. This page spells out exactly what happens to data when you use the site.</p>
+        <h2>Your salary and settings stay on your device</h2>
+        <p>The rate you enter, your currency, mode and theme are saved in your browser's local storage so they're there when you come back. They never leave your device: there is no account, no server-side database and no way for us to read them. Clearing your browser data, or using "Clear saved data" in Settings, removes them. Embedded counters on other websites store nothing.</p>
+        <h2>No cookies</h2>
+        <p>The site sets no cookies and shows no cookie banner because there is nothing to consent to.</p>
+        <h2>Visitor counting</h2>
+        <p>We count page views with <a href="https://www.goatcounter.com/">GoatCounter</a>, a privacy-focused service that records the page visited, the referring site, browser type, screen size and country. It does not use cookies or store IP addresses, cannot identify individuals and cannot follow you to other sites. Counts are used only to understand which pages are useful. If you use an ad blocker it will probably block this, and that's fine.</p>
+        <h2>Hosting</h2>
+        <p>The site is served by GitHub Pages, which, like any web host, sees the IP address of visitors in its server logs for operational and security purposes. See <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">GitHub's privacy statement</a>.</p>
+        <h2>Advertising</h2>
+        <p>There are currently no ads. If ads are added to the reference pages in future, this page will be updated first with the provider and any choices available to you; the live counter page will remain ad-free.</p>
+        <h2>Links to other sites</h2>
+        <p>Sources such as Forbes, the BLS and the Tax Foundation are linked for transparency. Their privacy practices are their own.</p>
+        <h2>Changes</h2>
+        <p>This policy was last updated on {TODAY}. Material changes will be noted here.</p>
+        {contact_line}""", "Privacy"))
+    paths.append(static_page("/contact/", "Contact | Live Salary", "How to report an error, suggest a page or get in touch about Live Salary.",
+        f"""
+        <h1>Contact</h1>
+        <p class="lede">Spotted a wrong figure, want a wage or a person added, or have an idea? Here's how to reach me.</p>
+        {contact_line if contact_line else ''}
+        <h2>Report an error or request a page</h2>
+        <p>The quickest route is to <a href="{REPO_URL}/issues">open an issue on GitHub</a> — no account? Just mention the page URL and what's off, and it'll get fixed in the next update.</p>
+        <h2>Press and embedding</h2>
+        <p>You're welcome to quote any figure from this site with a link. To put a live counter in your own article, see the <a href="/embed/">embed page</a>.</p>
+        <h2>What this site is not</h2>
+        <p>Live Salary provides estimates for general information. It is not tax, legal or financial advice, and can't answer questions about your personal tax situation.</p>""", "Contact"))
+    return paths
+
+
+def embed_pages():
+    paths = []
+    paths.append(static_page("/embed/", "Embed a Live Salary Counter in Your Site or Article",
+        "Add a live earnings counter to any web page with one line of HTML. Free, no tracking, works with any hourly rate or salary.",
+        f"""
+        <h1>Embed a live counter</h1>
+        <p class="lede">Put a ticking "earned since you opened this page" counter in your article, blog post or dashboard. One line of HTML, no sign-up, nothing tracked.</p>
+        <section class="live" data-hourly="25" data-mode="session" id="embedPreview">
+            <p class="eyebrow">Earning $25/hr since you opened this page</p>
+            <div class="live-amount" aria-live="off"><span class="live-main" data-live="main">$0.00</span><span class="live-sub" data-live="sub">00</span></div>
+            <p class="live-meta" data-live="meta"></p>
+        </section>
+        <h2>Configure</h2>
+        <form class="embed-form" data-embed-form>
+            <div class="field-row">
+                <div class="field">
+                    <label for="embedRate">Hourly rate (USD)</label>
+                    <div class="input-wrap"><span class="prefix">$</span><input id="embedRate" type="text" inputmode="decimal" value="25" data-embed-rate></div>
+                </div>
+                <div class="field">
+                    <label for="embedLabel">Label (optional)</label>
+                    <input id="embedLabel" type="text" maxlength="80" placeholder="Earning $25/hr since you opened this page" data-embed-label>
+                </div>
+            </div>
+            <label class="check"><input type="checkbox" data-embed-dark checked> Dark theme</label>
+        </form>
+        <h2>Copy this HTML</h2>
+        <pre class="code" data-embed-code>&lt;iframe src="{SITE}/embed/widget/?hourly=25" width="100%" height="220" style="border:0;border-radius:16px" title="Live Salary counter" loading="lazy"&gt;&lt;/iframe&gt;</pre>
+        <p class="fine">The widget is a plain iframe: it can't read anything on your page, sets no cookies and loads about 20 KB. A small "Live Salary" link in the corner is the only thing we ask for.</p>
+        <h2>Tips</h2>
+        <ul>
+            <li>Use an annual salary instead by dividing by {HOURS_PER_YEAR:,} ({HOURS_PER_WEEK} hours × {WEEKS_PER_YEAR} weeks) — or just pass <code>?annual=60000</code>.</li>
+            <li>For a 24/7 earner like an athlete or a company, add <code>&amp;mode=clock</code> to spread the yearly figure across every second of the year.</li>
+            <li>Add <code>&amp;theme=light</code> for light backgrounds.</li>
+        </ul>""", "Embed"))
+    # The widget itself: a bare page driven by query parameters (see counter.js).
+    body = f"""
+        <section class="live widget" data-hourly="auto" data-mode="session">
+            <p class="eyebrow" data-live="label">Earning since you opened this page</p>
+            <div class="live-amount" aria-live="off"><span class="live-main" data-live="main">$0.00</span><span class="live-sub" data-live="sub">00</span></div>
+            <p class="live-meta" data-live="meta"></p>
+            <a class="widget-brand" href="{SITE}/" target="_blank" rel="noopener">Live Salary</a>
+        </section>"""
+    write("/embed/widget/", shell(path="/embed/widget/", title="Live Salary counter", description="An embedded live earnings counter from Live Salary.",
+                                  body=body, breadcrumbs=[], bare=True, extra_head='\n    <meta name="robots" content="noindex">'))
+    return paths
+
+
+# ---------- Sitemaps ----------
+
+def write_sitemaps(groups):
+    """groups: dict name -> list of paths. Writes sitemaps/<name>.xml and a sitemap.xml index."""
+    os.makedirs(os.path.join(ROOT, "sitemaps"), exist_ok=True)
+    index = ['<?xml version="1.0" encoding="UTF-8"?>', '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
+    total = 0
+    for name, paths in groups.items():
+        if not paths:
+            continue
+        xml = ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
+        for p in paths:
+            xml.append(f"  <url><loc>{SITE}{p}</loc><lastmod>{TODAY}</lastmod></url>")
+        xml.append("</urlset>")
+        with open(os.path.join(ROOT, "sitemaps", f"{name}.xml"), "w", encoding="utf-8") as f:
+            f.write("\n".join(xml) + "\n")
+        index.append(f"  <sitemap><loc>{SITE}/sitemaps/{name}.xml</loc><lastmod>{TODAY}</lastmod></sitemap>")
+        total += len(paths)
+    index.append("</sitemapindex>")
+    with open(os.path.join(ROOT, "sitemap.xml"), "w", encoding="utf-8") as f:
+        f.write("\n".join(index) + "\n")
+    return total
+
+
+HOURLY_VALUES = []
+
+
 def main():
+    global HOURLY_VALUES
     wages = json.load(open(os.path.join(DATA, "wages.json")))
     people = json.load(open(os.path.join(DATA, "people.json")))
-    occupations = json.load(open(os.path.join(DATA, "occupations.json")))
-    hourly_values = sorted(wages["hourly"])
-    annual_values = sorted(wages["annual"])
+    occupations = json.load(open(os.path.join(DATA, "occupations.json")))["occupations"]
+    occ_source = json.load(open(os.path.join(DATA, "occupations.json")))["source"]
+    states_file = os.path.join(DATA, "states.json")
+    states_data = json.load(open(states_file)) if os.path.exists(states_file) else None
+    states = sorted(states_data["states"], key=lambda s: s["name"]) if states_data else []
 
-    for d in ("hourly", "salary", "earns"):
+    HOURLY_VALUES = hourly_values = sorted(wages["hourly"])
+    annual_values = sorted(wages["annual"])
+    monthly_values = sorted(wages["monthly"])
+    biweekly_values = sorted(wages["biweekly"])
+
+    for d in ("hourly", "salary", "monthly", "biweekly", "earns", "about", "methodology", "privacy", "contact", "embed", "sitemaps"):
         shutil.rmtree(os.path.join(ROOT, d), ignore_errors=True)
 
-    paths = []
+    groups = {"pages": ["/"], "hourly": [], "salary": [], "periods": [], "earners": [], "states-hourly": [], "states-salary": []}
+
     for h in hourly_values:
-        paths.append(hourly_page(h, hourly_values, annual_values))
+        groups["hourly"].append(hourly_page(h, hourly_values, annual_values, occupations, states))
+        for s in states:
+            groups["states-hourly"].append(state_page("hourly", h, s, states, occupations))
     for a in annual_values:
-        paths.append(salary_page(a, annual_values, hourly_values))
+        groups["salary"].append(salary_page(a, annual_values, hourly_values, occupations, states))
+        for s in states:
+            groups["states-salary"].append(state_page("salary", a, s, states, occupations))
+    for m in monthly_values:
+        groups["periods"].append(period_page(m, "monthly", monthly_values, annual_values, occupations))
+    for b in biweekly_values:
+        groups["periods"].append(period_page(b, "biweekly", biweekly_values, annual_values, occupations))
 
     all_people = [dict(p, group=g) for g in people["groups"] for p in g["people"]]
-    all_earners = all_people + occupations["occupations"]
+    all_earners = all_people + occupations
     for g in people["groups"]:
         for p in g["people"]:
-            paths.append(earner_page(p, "person", g["source"], all_earners))
-    for o in occupations["occupations"]:
-        paths.append(earner_page(o, "occupation", occupations["source"], all_earners))
+            groups["earners"].append(earner_page(p, "person", g["source"], all_earners, occupations))
+    for o in occupations:
+        groups["earners"].append(earner_page(o, "occupation", occ_source, all_earners, occupations))
 
-    paths.append(hub("/hourly/", "Hourly Wage to Salary: What Each Hourly Rate Earns Per Year | Live Salary",
-                     "Pick an hourly wage to see what it earns per year, month and week, after tax, and watch it add up live.",
-                     "What does an hourly wage earn per year?",
-                     f"Pick a rate. Every page shows yearly, monthly, weekly and daily pay at {HOURS_PER_WEEK} hours a week, a rough after-tax figure, and a live counter.",
-                     ["<nav class=\"chips big\">" + "".join(f'<a href="/hourly/{slug_for_rate(h)}/">{rate_text(h)}</a>' for h in hourly_values) + "</nav>"],
-                     "Hourly wages"))
-    paths.append(hub("/salary/", "Salary to Hourly: What Each Annual Salary Pays Per Hour | Live Salary",
-                     "Pick an annual salary to see the hourly, monthly and biweekly equivalent, after tax, and watch it add up live.",
-                     "What does a salary work out to per hour?",
-                     f"Pick a salary. Each page converts it to an hourly rate at {HOURS_PER_WEEK} hours a week, breaks it down by period, and shows it ticking up live.",
-                     ["<nav class=\"chips big\">" + "".join(f'<a href="/salary/{a}/">{money(a)}</a>' for a in annual_values) + "</nav>"],
-                     "Salaries"))
+    groups["pages"].append(hub("/hourly/", "Hourly Wage to Salary: What Each Hourly Rate Earns Per Year | Live Salary",
+        "Pick an hourly wage to see what it earns per year, month and week, what's left after tax in every state, whether it's good pay, and watch it add up live.",
+        "What does an hourly wage earn per year?",
+        f"Pick a rate. Every page shows yearly, monthly, weekly and daily pay at {HOURS_PER_WEEK} hours a week, take-home after tax in all 50 states, how it compares, and a live counter.",
+        ["<nav class=\"chips big\">" + "".join(f'<a href="/hourly/{slug_for_rate(h)}/">{rate_text(h)}</a>' for h in hourly_values) + "</nav>"], "Hourly wages"))
+    groups["pages"].append(hub("/salary/", "Salary to Hourly: What Each Annual Salary Pays Per Hour | Live Salary",
+        "Pick an annual salary to see the hourly, monthly and biweekly equivalent, take-home after tax by state, whether it's a good salary, and watch it add up live.",
+        "What does a salary work out to per hour?",
+        f"Pick a salary. Each page converts it to an hourly rate at {HOURS_PER_WEEK} hours a week, breaks it down by period, estimates take-home in every state, and shows it ticking up live.",
+        ["<nav class=\"chips big\">" + "".join(f'<a href="/salary/{a}/">{money(a)}</a>' for a in annual_values) + "</nav>"], "Salaries"))
+    groups["pages"].append(hub("/monthly/", "Monthly Pay to Yearly Salary and Hourly Rate | Live Salary",
+        "Pick a monthly pay amount to see what it is per year and per hour, after tax, and whether it's good pay.",
+        "What does a monthly income work out to?",
+        "Pick a monthly amount to convert it to a yearly salary and an hourly rate, with take-home estimates.",
+        ["<nav class=\"chips big\">" + "".join(f'<a href="/monthly/{m}/">{money(m)}</a>' for m in monthly_values) + "</nav>"], "Monthly pay"))
+    groups["pages"].append(hub("/biweekly/", "Biweekly Paycheck to Yearly Salary and Hourly Rate | Live Salary",
+        "Pick a biweekly paycheck amount to see what it is per year and per hour, after tax, and whether it's good pay.",
+        "What does a biweekly paycheck work out to?",
+        "Paid every two weeks? Pick your gross paycheck to see the yearly salary and hourly rate behind it.",
+        ["<nav class=\"chips big\">" + "".join(f'<a href="/biweekly/{b}/">{money(b)}</a>' for b in biweekly_values) + "</nav>"], "Biweekly pay"))
+
     people_sections = []
     for g in people["groups"]:
         cards = "".join(
@@ -452,24 +840,20 @@ def main():
         people_sections.append(f"<h2>{escape(g['title'])}</h2>\n<div class=\"cards\">{cards}</div>")
     occ_cards = "".join(
         f'<a class="card" href="/earns/{o["slug"]}/"><strong>{escape(o["name"])}</strong><span>US median</span><em>{money(o["annual"])}/yr · {money(o["annual"] / HOURS_PER_YEAR, cents=True)}/hr</em></a>'
-        for o in sorted(occupations["occupations"], key=lambda o: -o["annual"]))
+        for o in sorted(occupations, key=lambda o: -o["annual"]))
     people_sections.append(f"<h2>Occupations</h2>\n<div class=\"cards\">{occ_cards}</div>")
-    paths.append(hub("/earns/", "Who Earns What: Athletes, Celebrities, CEOs and Everyday Jobs, Per Second | Live Salary",
-                     "See how fast the world's highest-paid athletes, musicians and CEOs earn — per second, minute and hour — next to the median pay for everyday jobs.",
-                     "Who earns what, per second",
-                     "The highest-paid people on earth, and the median pay for ordinary jobs, each with a live counter.",
-                     people_sections, "Who earns what"))
+    groups["pages"].append(hub("/earns/", "Who Earns What: Athletes, Celebrities, CEOs and Everyday Jobs, Per Second | Live Salary",
+        "See how fast the world's highest-paid athletes, musicians and CEOs earn — per second, minute and hour — next to the median pay for everyday jobs.",
+        "Who earns what, per second",
+        "The highest-paid people on earth, and the median pay for ordinary jobs, each with a live counter.",
+        people_sections, "Who earns what"))
 
-    # Sitemap: homepage first, then every generated page.
-    urls = [("/", TODAY)] + [(p, TODAY) for p in paths]
-    xml = ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
-    for p, mod in urls:
-        xml.append(f"  <url><loc>{SITE}{p}</loc><lastmod>{mod}</lastmod></url>")
-    xml.append("</urlset>")
-    with open(os.path.join(ROOT, "sitemap.xml"), "w", encoding="utf-8") as f:
-        f.write("\n".join(xml) + "\n")
+    groups["pages"] += trust_pages(people, occupations, states_data)
+    groups["pages"] += embed_pages()
 
-    print(f"Generated {len(paths)} pages and sitemap.xml with {len(urls)} URLs.")
+    total = write_sitemaps(groups)
+    print(f"Generated {sum(len(v) for v in groups.values()) - 1} pages; sitemap index covers {total} URLs"
+          f"{' (no states.json: state pages skipped)' if not states else f' across {len(states)} states'}.")
 
 
 if __name__ == "__main__":
