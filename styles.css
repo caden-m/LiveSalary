@@ -291,12 +291,17 @@ button { cursor: pointer; }
     left: 50%;
     bottom: max(18px, env(safe-area-inset-bottom));
     translate: -50% 0;
-    display: grid;
-    place-items: center;
-    width: 36px;
-    height: 36px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 14px;
     border-radius: 999px;
     color: var(--fg-3);
+    text-decoration: none;
+    font-size: 0.68rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
     transition: color 0.2s;
     animation: bob 2.6s ease-in-out infinite;
 }
@@ -401,9 +406,34 @@ button { cursor: pointer; }
 }
 .about h2 { margin: 0 0 10px; font-size: 0.95rem; font-weight: 500; color: var(--fg-2); }
 .about p { margin: 0 0 10px; font-size: 0.88rem; line-height: 1.6; color: var(--fg-3); }
-.explore { display: flex; flex-direction: column; gap: 8px; margin-top: 18px; }
-.explore a { font-size: 0.88rem; color: var(--fg-2); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line-strong); }
-.explore a:hover { color: var(--fg); text-decoration-color: var(--fg); }
+/* Links to the wage, salary and earner sections, right under the projections */
+.explore {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    width: min(100%, 720px);
+    margin-top: 12px;
+}
+.explore a {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 14px 16px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    text-decoration: none;
+    text-align: left;
+    transition: border-color 0.2s;
+}
+.explore a:hover { border-color: var(--fg); }
+.explore strong { font-weight: 500; font-size: 0.92rem; color: var(--fg); }
+.explore span { font-size: 0.8rem; color: var(--fg-3); line-height: 1.4; }
+
+/* Section links in the top bar (desktop only; phones get the cards below the fold) */
+.top-links { display: flex; gap: 22px; margin: 10px auto 0; }
+.top-links a { font-size: 0.82rem; color: var(--fg-3); text-decoration: none; transition: color 0.2s; }
+.top-links a:hover { color: var(--fg); }
+@media (max-width: 760px) { .top-links { display: none; } }
 
 /* ---------- Privacy ---------- */
 
@@ -521,6 +551,7 @@ kbd {
 @media (max-width: 600px) {
     body { font-size: 14px; }
     .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .explore { grid-template-columns: 1fr; }
     .controls { width: 100%; max-width: 360px; }
     .btn { flex: 1; min-width: 0; }
     .sheet {

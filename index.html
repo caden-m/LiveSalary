@@ -39,6 +39,11 @@
             <time id="clock" class="clock-time">00:00:00</time>
             <span id="date" class="clock-date"></span>
         </div>
+        <nav class="top-links" aria-label="Explore">
+            <a href="/hourly/">Hourly wages</a>
+            <a href="/salary/">Salaries</a>
+            <a href="/earns/">Who earns what</a>
+        </nav>
         <nav class="top-actions" aria-label="Page actions">
             <button id="privacyBtn" class="icon-btn" type="button" aria-pressed="false" title="Privacy mode (P)" aria-label="Privacy mode">
                 <svg class="ic ic-eye" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -80,7 +85,8 @@
             <button class="link" id="setRateBtn" type="button">Set your rate</button> to begin
         </p>
 
-        <a class="scroll-hint" href="#stats" aria-label="See projections">
+        <a class="scroll-hint" href="#stats">
+            <span>Explore</span>
             <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 10l6 6 6-6"/></svg>
         </a>
     </main>
@@ -95,15 +101,16 @@
         </dl>
         <p class="stats-note sensitive" id="statsNote"></p>
 
+        <nav class="explore" aria-label="Explore the site">
+            <a href="/hourly/"><strong>Hourly wages</strong><span>$25 an hour is how much a year?</span></a>
+            <a href="/salary/"><strong>Salaries</strong><span>$60,000 a year is how much an hour?</span></a>
+            <a href="/earns/"><strong>Who earns what</strong><span>Athletes, CEOs and everyday jobs, per second</span></a>
+        </nav>
+
         <section class="about">
             <h2>What is Live Salary?</h2>
             <p>A free real-time salary tracker. Enter your hourly rate or annual salary, press Start, and watch your earnings count up second by second — or set your working hours and let it run automatically each day.</p>
             <p>Everything stays in your browser: no account, no cookies, nothing uploaded. Add it to your phone's home screen and it works offline too.</p>
-            <nav class="explore" aria-label="Explore">
-                <a href="/hourly/">What does $25 an hour make a year?</a>
-                <a href="/salary/">What does $60,000 a year pay per hour?</a>
-                <a href="/earns/">How fast do athletes and CEOs earn?</a>
-            </nav>
         </section>
     </footer>
 
