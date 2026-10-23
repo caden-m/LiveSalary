@@ -16,6 +16,9 @@
         dayEnd: '17:00',
         theme: 'auto',          // 'auto' | 'dark' | 'light'
         privacy: false,
+        goal: 0,                // stopwatch: amount to aim for (0 = off)
+        tips: 0,                // stopwatch: flat amount added to today's earnings
+        overtime: false,        // stopwatch: 1.5× rate beyond 8 hours
         accumulatedMs: 0,       // stopwatch time banked while stopped
         runningSince: null      // timestamp while the stopwatch runs, else null
     };
@@ -43,7 +46,8 @@
         const s = { ...DEFAULTS };
         if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return s;
         for (const key of Object.keys(ENUMS)) if (ENUMS[key].includes(raw[key])) s[key] = raw[key];
-        for (const key of ['hourly', 'annual', 'accumulatedMs']) if (isNonNegNumber(raw[key])) s[key] = raw[key];
+        for (const key of ['hourly', 'annual', 'accumulatedMs', 'goal', 'tips']) if (isNonNegNumber(raw[key])) s[key] = raw[key];
+        s.overtime = raw.overtime === true;
         if (isNonNegNumber(raw.hoursPerWeek) && raw.hoursPerWeek > 0) s.hoursPerWeek = Math.min(raw.hoursPerWeek, MAX_HOURS_PER_WEEK);
         if (CURRENCIES.includes(raw.currency)) s.currency = raw.currency;
         if (typeof raw.dayStart === 'string' && TIME_RE.test(raw.dayStart)) s.dayStart = raw.dayStart;
@@ -150,6 +154,21 @@
         return state.accumulatedMs + (state.runningSince ? Math.max(0, now - state.runningSince) : 0);
     }
 
+    const OVERTIME_AFTER_H = 8, OVERTIME_MULT = 1.5;
+
+    // Pay for the stopwatch session: straight time, optional time-and-a-half past 8 hours, plus tips.
+    function stopwatchEarnings(elapsedMs, rate) {
+        const h = elapsedMs / 3600000;
+        const base = state.overtime && h > OVERTIME_AFTER_H
+            ? OVERTIME_AFTER_H * rate + (h - OVERTIME_AFTER_H) * rate * OVERTIME_MULT
+            : h * rate;
+        return base + state.tips;
+    }
+
+    function currentRate(elapsedMs, rate) {
+        return state.overtime && elapsedMs / 3600000 > OVERTIME_AFTER_H ? rate * OVERTIME_MULT : rate;
+    }
+
     // Builds the shift that starts on the given calendar day, using local clock times so that
     // daylight-saving changes don't shift the boundaries.
     function shiftOn(dayOffset, now) {
@@ -205,13 +224,16 @@
     }
 
     let lastProgressPct = -1;
-    function renderProgress(worked, durationMs) {
-        const pct = Math.round((worked / durationMs) * 1000) / 10;
+    function renderProgress(done, total, unit = 'time') {
+        const pct = Math.round((done / total) * 1000) / 10;
         if (pct === lastProgressPct) return;
         lastProgressPct = pct;
         el.progressFill.style.width = pct + '%';
         progressBar.setAttribute('aria-valuenow', String(pct));
-        progressBar.setAttribute('aria-valuetext', `${fmtDuration(worked, { seconds: false })} of ${fmtDuration(durationMs, { seconds: false })}`);
+        progressBar.setAttribute('aria-label', unit === 'money' ? 'Goal progress' : 'Workday progress');
+        progressBar.setAttribute('aria-valuetext', unit === 'money'
+            ? `${fmt.format(done)} of ${fmt.format(total)}`
+            : `${fmtDuration(done, { seconds: false })} of ${fmtDuration(total, { seconds: false })}`);
     }
 
     function render(now = Date.now()) {
@@ -231,11 +253,22 @@
         if (state.mode === 'stopwatch') {
             const elapsed = stopwatchElapsed(now);
             active = ready && !!state.runningSince;
-            earnings = rate * (elapsed / 3600000);
+            earnings = stopwatchEarnings(elapsed, rate);
             el.controls.hidden = !ready || editingRate;
-            el.progress.hidden = true;
-            el.eyebrow.textContent = active ? 'Earning now' : elapsed > 0 ? 'Paused' : ready ? 'Ready' : 'Live Salary';
-            el.metaInfo.textContent = ready ? fmtDuration(elapsed) : 'Earnings, second by second';
+            const goal = state.goal > 0 ? state.goal : 0;
+            const reached = goal > 0 && earnings >= goal;
+            el.progress.hidden = !(ready && goal > 0);
+            if (goal > 0) renderProgress(Math.min(earnings, goal), goal, 'money');
+            el.eyebrow.textContent = reached ? 'Goal reached' : active ? 'Earning now' : elapsed > 0 ? 'Paused' : ready ? 'Ready' : 'Live Salary';
+            let info = ready ? fmtDuration(elapsed) : 'Earnings, second by second';
+            if (ready && goal > 0 && !reached) {
+                const left = goal - earnings;
+                const eta = left / currentRate(elapsed, rate) * 3600000;
+                info += ` · ${fmt.format(left)} to go${active ? ' · ' + fmtDuration(eta, { seconds: false }) : ''}`;
+            } else if (ready && state.overtime && elapsed / 3600000 > OVERTIME_AFTER_H) {
+                info += ' · overtime';
+            }
+            el.metaInfo.textContent = info;
             el.startStop.textContent = active ? 'Stop' : elapsed > 0 ? 'Resume' : 'Start';
         } else {
             const { start, end, durationMs } = shiftWindow(now);
@@ -398,6 +431,63 @@
         refreshAll();
     }
 
+    // ---------- Snapshot sharing ----------
+
+    // Draws the current counter to a 1200×630 image and shares it (or downloads it where sharing
+    // files isn't supported). Nothing is uploaded anywhere; the image is made on the device.
+    async function shareSnapshot() {
+        const now = Date.now();
+        const rate = hourlyRate();
+        let earnings = 0, line = '';
+        if (state.mode === 'stopwatch') {
+            const elapsed = stopwatchElapsed(now);
+            earnings = stopwatchEarnings(elapsed, rate);
+            line = `${fmtDuration(elapsed)} at ${fmt.format(rate)}/hr`;
+        } else {
+            const { start, durationMs } = shiftWindow(now);
+            const worked = Math.min(Math.max(now - start, 0), durationMs);
+            earnings = rate * (worked / 3600000);
+            line = `${fmtDuration(worked, { seconds: false })} into today's ${state.dayStart}–${state.dayEnd} shift`;
+        }
+        const light = document.documentElement.dataset.theme === 'light' ||
+            (!document.documentElement.dataset.theme && matchMedia('(prefers-color-scheme: light)').matches);
+        const C = light ? { bg: '#f6f5f1', fg: '#151514', fg2: 'rgba(21,21,20,0.62)', fg3: 'rgba(21,21,20,0.4)', accent: '#1f8a4c' }
+                        : { bg: '#0e0e10', fg: '#f2f2ef', fg2: 'rgba(242,242,239,0.62)', fg3: 'rgba(242,242,239,0.36)', accent: '#9fe8b8' };
+        try { await document.fonts.load('300 160px "JetBrains Mono"'); await document.fonts.load('500 28px Inter'); } catch { /* fall back to system fonts */ }
+
+        const W = 1200, H = 630, c = document.createElement('canvas');
+        c.width = W; c.height = H;
+        const g = c.getContext('2d');
+        g.fillStyle = C.bg; g.fillRect(0, 0, W, H);
+        const glow = g.createRadialGradient(W / 2, 330, 0, W / 2, 330, 320);
+        glow.addColorStop(0, light ? 'rgba(31,138,76,0.18)' : 'rgba(159,232,184,0.18)'); glow.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = glow; g.fillRect(0, 0, W, H);
+        g.textAlign = 'center';
+        g.fillStyle = C.accent; g.font = '500 24px Inter, system-ui, sans-serif';
+        g.fillText((state.mode === 'stopwatch' ? 'EARNED SO FAR' : 'EARNED TODAY').split('').join(String.fromCharCode(8202)), W / 2, 150);
+        const main = fmt.format(truncateMinor(earnings));
+        let size = 170;
+        g.font = `300 ${size}px "JetBrains Mono", ui-monospace, monospace`;
+        while (g.measureText(main).width > W - 160 && size > 60) { size -= 10; g.font = `300 ${size}px "JetBrains Mono", ui-monospace, monospace`; }
+        g.fillStyle = C.fg; g.fillText(main, W / 2, 340 + size * 0.35);
+        g.fillStyle = C.fg2; g.font = '400 32px Inter, system-ui, sans-serif';
+        g.fillText(line, W / 2, 470);
+        g.fillStyle = C.fg3; g.font = '400 24px "JetBrains Mono", ui-monospace, monospace';
+        g.fillText('mylivesalary.com', W / 2, 570);
+
+        const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+        if (!blob) return;
+        const file = new File([blob], 'live-salary.png', { type: 'image/png' });
+        const text = `I've earned ${main} so far — ${line}. Watch yours tick up at https://mylivesalary.com`;
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            try { await navigator.share({ files: [file], text }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+        }
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob); a.download = 'live-salary.png';
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    }
+
     function toggleStopwatch() {
         if (!hasRate()) { startRateEdit(); return; }
         const now = Date.now();
@@ -475,6 +565,7 @@
         el.form.querySelectorAll('[data-key]').forEach(input => {
             const key = input.dataset.key;
             if (input.type === 'radio') { if (input.checked) state[key] = input.value; return; }
+            if (input.type === 'checkbox') { state[key] = input.checked; return; }
             if (input.dataset.type === 'number') { state[key] = parseAmount(input.value); return; }
             if (input.type === 'time') { if (TIME_RE.test(input.value)) state[key] = input.value; return; } // keep the last valid value while editing
             state[key] = input.value;
@@ -490,6 +581,7 @@
         el.form.querySelectorAll('[data-key]').forEach(input => {
             const key = input.dataset.key;
             if (input.type === 'radio') { input.checked = input.value === String(state[key]); return; }
+            if (input.type === 'checkbox') { input.checked = state[key] === true; return; }
             if (input.dataset.type === 'number') { input.value = state[key] > 0 ? String(state[key]) : ''; return; }
             input.value = state[key];
         });
@@ -543,6 +635,7 @@
     el.startStop.addEventListener('click', toggleStopwatch);
     el.reset.addEventListener('click', resetStopwatch);
     el.privacyBtn.addEventListener('click', togglePrivacy);
+    $('shareBtn').addEventListener('click', () => { if (hasRate()) shareSnapshot(); else startRateEdit(); });
     el.settingsBtn.addEventListener('click', () => openSettings());
     el.setRate.addEventListener('click', startRateEdit);
     el.rateBtn.addEventListener('click', startRateEdit);

@@ -95,9 +95,12 @@
         const input = block.querySelector('[data-compare-input]');
         const out = block.querySelector('[data-compare-out]');
         const perSecond = annual / (365 * 24 * 3600);
-        const name = out.textContent.split(' earns ')[0];
+        const match = out.textContent.match(/^(.*?) (earns|makes|spends|produces|costs) /);
+        const name = match ? match[1] : out.textContent.split(' ')[0];
+        const verb = match ? match[2] : 'earns';
 
         function duration(seconds) {
+            if (seconds < 1) return `${seconds.toFixed(2)} seconds`;
             if (seconds < 60) return `${Math.round(seconds)} seconds`;
             if (seconds < 3600) return `${Math.round(seconds / 60)} minutes`;
             if (seconds < 86400) { const h = Math.floor(seconds / 3600); return `${h}h ${String(Math.round((seconds % 3600) / 60)).padStart(2, '0')}m`; }
@@ -107,7 +110,7 @@
         function update() {
             const yours = parseMoney(input.value);
             if (!yours) { out.textContent = 'Enter your salary to compare.'; return; }
-            out.replaceChildren(`${name} earns your yearly pay every `, Object.assign(document.createElement('strong'), { textContent: duration(yours / perSecond) }), '.');
+            out.replaceChildren(`${name} ${verb} your yearly pay every `, Object.assign(document.createElement('strong'), { textContent: duration(yours / perSecond) }), '.');
         }
         input.addEventListener('input', update);
     });

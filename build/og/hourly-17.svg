@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#0e0e10"/>
+  <circle cx="600" cy="340" r="300" fill="#9fe8b8" opacity="0.10"/>
+  <circle cx="600" cy="340" r="200" fill="#9fe8b8" opacity="0.08"/>
+  <text x="600" y="150" text-anchor="middle" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="24" letter-spacing="7" fill="#9fe8b8">HOURLY WAGE</text>
+  <text x="600" y="371" text-anchor="middle" font-family="Menlo, monospace" font-size="88" fill="#f2f2ef">$17/hr = $35,360/yr</text>
+  <text x="600" y="490" text-anchor="middle" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="37" fill="#9a9a97">$2,947 a month · about $30,540 a year after federal tax</text>
+  <text x="600" y="572" text-anchor="middle" font-family="Menlo, monospace" font-size="24" fill="#5c5c5a">mylivesalary.com</text>
+</svg>

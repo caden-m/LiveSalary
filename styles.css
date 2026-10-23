@@ -532,6 +532,9 @@ select {
 }
 select:focus, input[type="time"]:focus { outline: none; border-color: var(--fg); }
 
+.check { display: flex; align-items: center; gap: 10px; font-size: 0.88rem; color: var(--fg-2); cursor: pointer; }
+.check input { width: 16px; height: 16px; accent-color: var(--accent); margin: 0; }
+
 .derived { margin: -4px 0 0; font-size: 0.82rem; color: var(--fg-3); font-family: var(--mono); min-height: 1.2em; }
 .help { margin: 0; font-size: 0.82rem; color: var(--fg-3); }
 

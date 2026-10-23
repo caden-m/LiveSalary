@@ -102,7 +102,7 @@ def pct(x):
 def duration(seconds):
     seconds = max(0, seconds)
     if seconds < 1:
-        return "under a second"
+        return f"{seconds:.2f} seconds"
     if seconds < 60:
         return f"{seconds:.0f} seconds"
     minutes = seconds / 60
@@ -142,8 +142,9 @@ FOOT_NAV = ('<a href="/hourly/">Hourly wages</a> · <a href="/salary/">Salaries<
             '<a href="/about/">About</a> · <a href="/methodology/">Methodology</a> · <a href="/privacy/">Privacy</a> · <a href="/contact/">Contact</a>')
 
 
-def shell(*, path, title, description, body, breadcrumbs, json_ld=None, bare=False, extra_head=""):
+def shell(*, path, title, description, body, breadcrumbs, json_ld=None, bare=False, extra_head="", og=None):
     url = f"{SITE}{path}"
+    og_url = f"{SITE}/assets/og/{og}.png" if og else f"{SITE}/assets/og-image.png"
     ld_blocks = []
     if breadcrumbs:
         ld_blocks.append({
@@ -182,8 +183,11 @@ def shell(*, path, title, description, body, breadcrumbs, json_ld=None, bare=Fal
     <meta property="og:title" content="{escape(title)}">
     <meta property="og:description" content="{escape(description)}">
     <meta property="og:url" content="{url}">
-    <meta property="og:image" content="{SITE}/assets/og-image.png">
+    <meta property="og:image" content="{og_url}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
     <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="{og_url}">
     <link rel="icon" href="/assets/icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
     <link rel="stylesheet" href="/styles.css">
@@ -200,6 +204,42 @@ def shell(*, path, title, description, body, breadcrumbs, json_ld=None, bare=Fal
 </body>
 </html>
 """
+
+
+# ---------- Social preview cards ----------
+# Each base page gets a 1200×630 card. The generator writes SVGs to build/og/; build/render_og.sh
+# turns new or changed ones into assets/og/<slug>.png with macOS QuickLook. State pages reuse
+# their parent wage's card.
+
+OG_CARDS = {}
+
+
+def og_card(slug, kicker, big, small, foot="mylivesalary.com"):
+    big_size = max(56, min(190, int(1040 / (0.62 * max(len(big), 1)))))
+    small_size = max(24, min(40, int(1080 / (0.52 * max(len(small), 1)))))
+    OG_CARDS[slug] = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#0e0e10"/>
+  <circle cx="600" cy="340" r="300" fill="#9fe8b8" opacity="0.10"/>
+  <circle cx="600" cy="340" r="200" fill="#9fe8b8" opacity="0.08"/>
+  <text x="600" y="150" text-anchor="middle" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="24" letter-spacing="7" fill="#9fe8b8">{escape(kicker.upper())}</text>
+  <text x="600" y="{340 + big_size * 0.35:.0f}" text-anchor="middle" font-family="Menlo, monospace" font-size="{big_size}" fill="#f2f2ef">{escape(big)}</text>
+  <text x="600" y="490" text-anchor="middle" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="{small_size}" fill="#9a9a97">{escape(small)}</text>
+  <text x="600" y="572" text-anchor="middle" font-family="Menlo, monospace" font-size="24" fill="#5c5c5a">{escape(foot)}</text>
+</svg>
+"""
+    return slug
+
+
+def write_og_cards():
+    out = os.path.join(ROOT, "build", "og")
+    os.makedirs(out, exist_ok=True)
+    for slug, svg in OG_CARDS.items():
+        p = os.path.join(out, f"{slug}.svg")
+        old = open(p).read() if os.path.exists(p) else None
+        if old != svg:
+            with open(p, "w", encoding="utf-8") as f:
+                f.write(svg)
+    return len(OG_CARDS)
 
 
 def write(path, html):
@@ -370,7 +410,9 @@ def hourly_page(h, all_hourly, annual_values, occupations, states):
         <nav class="chips">{neighbours(all_hourly, h, lambda v: (rate_text(v) + "/hr", slug_for_rate(v)), "/hourly/")}</nav>
         <p>Or flip it around: <a href="/salary/{closest_salary}/">{money(closest_salary)} a year is how much an hour?</a></p>
 """
-    write(path, shell(path=path, title=title, description=description, body=body, json_ld=webpage_ld(title, description, path),
+    og = og_card(f"hourly-{slug_for_rate(h)}", "Hourly wage", f"{rate_text(h)}/hr = {money(annual)}/yr",
+                 f"{money(annual / 12)} a month · about {money(net)} a year after federal tax")
+    write(path, shell(path=path, title=title, description=description, body=body, json_ld=webpage_ld(title, description, path), og=og,
                       breadcrumbs=[("Live Salary", "/"), ("Hourly wages", "/hourly/"), (f"{rate_text(h)} an hour", path)]))
     return path
 
@@ -410,7 +452,9 @@ def salary_page(a, all_annual, hourly_values, occupations, states):
         <nav class="chips">{neighbours(all_annual, a, lambda v: (money(v), str(v)), "/salary/")}</nav>
         <p>Or flip it around: <a href="/hourly/{slug_for_rate(closest_hourly)}/">{rate_text(closest_hourly)} an hour is how much a year?</a></p>
 """
-    write(path, shell(path=path, title=title, description=description, body=body, json_ld=webpage_ld(title, description, path),
+    og = og_card(f"salary-{a}", "Annual salary", f"{money(a)}/yr = {money(h, cents=True)}/hr",
+                 f"{money(a / 12)} a month · about {money(net)} a year after federal tax")
+    write(path, shell(path=path, title=title, description=description, body=body, json_ld=webpage_ld(title, description, path), og=og,
                       breadcrumbs=[("Live Salary", "/"), ("Salaries", "/salary/"), (f"{money(a)} a year", path)]))
     return path
 
@@ -444,7 +488,9 @@ def period_page(amount, kind, all_values, annual_values, occupations):
         <nav class="chips">{neighbours(all_values, amount, lambda v: (money(v), str(v)), f"/{kind}/")}</nav>
         <p>See the full picture for <a href="/salary/{closest_salary}/">{money(closest_salary)} a year</a>, including take-home by state.</p>
 """
-    write(path, shell(path=path, title=title, description=description, body=body, json_ld=webpage_ld(title, description, path),
+    og = og_card(f"{kind}-{amount}", hub_name, f"{money(amount)} {noun} = {money(annual)}/yr",
+                 f"{money(h, cents=True)} an hour · about {money(net / per_year)} {noun} after federal tax")
+    write(path, shell(path=path, title=title, description=description, body=body, json_ld=webpage_ld(title, description, path), og=og,
                       breadcrumbs=[("Live Salary", "/"), (hub_name, f"/{kind}/"), (f"{money(amount)} {noun}", path)]))
     return path
 
@@ -512,7 +558,8 @@ def state_page(kind, value, state, states, occupations):
         <nav class="chips">{''.join(f'<a href="{parent_path}{s["slug"]}/">{escape(s["name"])}</a>' for s in states if s["slug"] != state["slug"])}</nav>
         <p>Back to <a href="{parent_path}">{parent_name} nationally</a>.</p>
 """
-    write(path, shell(path=path, title=title, description=description, body=body, json_ld=webpage_ld(title, description, path),
+    og = f"hourly-{slug_for_rate(h)}" if kind == "hourly" else f"salary-{annual}"
+    write(path, shell(path=path, title=title, description=description, body=body, json_ld=webpage_ld(title, description, path), og=og,
                       breadcrumbs=[("Live Salary", "/"), ("Hourly wages" if kind == "hourly" else "Salaries", f"/{kind}/"), (parent_name, parent_path), (name, path)]))
     return path
 
@@ -549,6 +596,7 @@ def earner_page(e, kind, source, all_earners, occupations):
 
     if is_person:
         extras = f"""
+{earner_hero(name, per_second, per_second * 3600, US_MEDIAN_HOURLY, "Median US worker")}
         <h2>Compared with a typical salary</h2>
         <p>The median full-time US worker earns about {money(US_MEDIAN_ANNUAL)} a year. {name} earns that much in roughly <strong>{median_time}</strong>.</p>
         <p class="compare" data-compare data-annual="{annual}">
@@ -595,7 +643,101 @@ def earner_page(e, kind, source, all_earners, occupations):
         <h2>More earners</h2>
         <nav class="chips">{others}</nav>
 """
-    write(path, shell(path=path, title=title, description=description, body=body, json_ld=webpage_ld(title, description, path),
+    if is_person:
+        og = og_card(f"earns-{e['slug']}", name, f"{money(per_second, cents=True)} every second", f"{e['role']} · about {short_money(annual)} a year")
+    else:
+        og = og_card(f"earns-{e['slug']}", name, f"{money(per_hour_working, cents=True)} an hour", f"US median {money(annual)} a year · {money(annual / 12)} a month")
+    write(path, shell(path=path, title=title, description=description, body=body, json_ld=webpage_ld(title, description, path), og=og,
+                      breadcrumbs=[("Live Salary", "/"), ("Who earns what", "/earns/"), (name, path)]))
+    return path
+
+
+def earner_hero(name, per_second, per_hour, baseline_per_hour, baseline_name):
+    """Big per-period tiles plus a to-scale bar against the median worker. Bar widths use .w-N classes
+    (inline styles are blocked by the CSP)."""
+    ratio = per_hour / baseline_per_hour if baseline_per_hour else 0
+    base_w = max(1, min(100, round(100 / ratio))) if ratio >= 1 else 100
+    them_w = 100 if ratio >= 1 else max(1, round(100 * ratio))
+    tile_money = lambda v: short_money(v) if v >= 100000 else money(v, cents=v < 1000)
+    tiles = "".join(
+        f'<div class="tile"><span class="tile-k">{k}</span><span class="tile-v">{v}</span></div>'
+        for k, v in [("Per second", tile_money(per_second)), ("Per minute", tile_money(per_second * 60)),
+                     ("Per hour", tile_money(per_hour)), ("Per day", tile_money(per_second * 86400))])
+    return f"""
+        <section class="hero-earner" aria-label="Earnings at a glance">
+            <div class="tiles">{tiles}</div>
+            <div class="vs">
+                <div class="vs-row"><span class="vs-name">{escape(name)}</span><div class="vs-bar"><span class="w-{them_w}"></span></div><span class="vs-val">{money(per_hour)}/hr</span></div>
+                <div class="vs-row"><span class="vs-name">{escape(baseline_name)}</span><div class="vs-bar"><span class="base w-{base_w}"></span></div><span class="vs-val">{money(baseline_per_hour, cents=True)}/hr</span></div>
+            </div>
+            <p class="vs-note">Drawn to scale: hour for hour, that's <strong>{ratio:,.0f}×</strong> what the median full-time US worker earns{' — counting every hour of the day and night' if per_hour == per_second * 3600 else ''}.</p>
+        </section>"""
+
+
+# ---------- Organisation pages (companies, governments) ----------
+
+def org_page(o, all_orgs):
+    annual = o["annual"]
+    per_second = annual / (365 * 24 * 3600)
+    path = f"/earns/{o['slug']}/"
+    name = o["name"]
+    is_gov = o.get("kind") == "government"
+    basis = o.get("basis", "net income")
+    kind = "interest" if "interest" in basis.lower() else o.get("kind", "company")
+    verb, verb_title, counter_label = {
+        "company": ("makes", "Make", f"{name}'s profit since you opened this page"),
+        "government": ("spends", "Spend", f"{name} has spent this much since you opened this page"),
+        "economy": ("produces", "Produce", f"{name} has produced this much since you opened this page"),
+        "interest": ("costs", "Cost", "Interest accrued since you opened this page"),
+    }.get(kind, ("makes", "Make", f"{name} since you opened this page"))
+    what = " in profit" if verb == "makes" else ""
+    title_name = "the " + name[4:] if name.startswith("The ") else name
+    title = f"How Much Does {title_name} {verb_title} Per Second? {money(per_second)} | Live Salary"
+    description = (f"{title_name.capitalize() if title_name.startswith('the ') else title_name} {verb} about {money(per_second)} every second — {money(per_second * 60)} a minute, {money(per_second * 3600)} an hour — "
+                   f"based on {short_money(annual)} {basis} in {o.get('fiscal_year', 'the latest fiscal year')}. Watch it tick up live.")
+    median_time = duration(US_MEDIAN_ANNUAL / per_second)
+    rev = o.get("revenue")
+    rev_line = (f" On revenue of {money(rev)} ({money(rev / 31536000)} a second), that's a {pct(annual / rev)} net margin." if rev and verb == "makes" else
+                f" Receipts were {money(rev)} ({money(rev / 31536000)} a second), leaving a gap of {money(o.get('spending', annual) - rev)} for the year." if rev and verb == "spends" else "")
+    body = f"""
+        <h1>{escape(name)} {verb} about <span class="hl">{money(per_second)}</span>{what} every second</h1>
+        <p class="lede">{escape(name)} reported <strong>{money(annual)}</strong> of {escape(basis)} for {escape(o.get('fiscal_year', 'its latest fiscal year'))}. Spread across every second of the year, that's {money(per_second * 60)} a minute, {money(per_second * 3600)} an hour and {money(annual / 365)} a day.{rev_line}</p>
+{counter_block(per_second * 3600, label=counter_label, mode="clock")}
+{earner_hero(name, per_second, per_second * 3600, US_MEDIAN_HOURLY, "Median US worker")}
+        <h2>Compared with a person</h2>
+        <p>The median full-time US worker earns about {money(US_MEDIAN_ANNUAL)} a year. {escape(name)} {verb} that much every <strong>{median_time}</strong>.</p>
+        <p class="compare" data-compare data-annual="{annual}">
+            <label>Your salary: <span class="input-wrap"><span class="prefix">$</span><input type="text" inputmode="numeric" value="{US_MEDIAN_ANNUAL}" data-compare-input aria-label="Your annual salary"></span></label>
+            <span data-compare-out>{escape(name)} {verb} your yearly pay every <strong>{median_time}</strong>.</span>
+        </p>
+        <h2>In the time it takes to…</h2>
+        <ul class="ticks">
+            <li><strong>{money(per_second * 10)}</strong> while you read this sentence (10 seconds)</li>
+            <li><strong>{money(per_second * 60 * 4)}</strong> during a 4-minute song</li>
+            <li><strong>{money(per_second * 3600 * 2)}</strong> during a 2-hour film</li>
+            <li><strong>{money(per_second * 3600 * 8)}</strong> during your 8-hour workday</li>
+            <li><strong>{money(per_second * 86400 * 7)}</strong> in a week</li>
+        </ul>
+        <h2>Per period</h2>
+        <table class="grid">
+            <thead><tr><th scope="col">Period</th><th scope="col">{escape(basis.capitalize())}</th></tr></thead>
+            <tbody>
+                <tr><th scope="row">Per second</th><td>{money(per_second)}</td></tr>
+                <tr><th scope="row">Per minute</th><td>{money(per_second * 60)}</td></tr>
+                <tr><th scope="row">Per hour</th><td>{money(per_second * 3600)}</td></tr>
+                <tr><th scope="row">Per day</th><td>{money(annual / 365)}</td></tr>
+                <tr><th scope="row">Per week</th><td>{money(annual / 52)}</td></tr>
+                <tr><th scope="row">Per month</th><td>{money(annual / 12)}</td></tr>
+                <tr><th scope="row">Per year</th><td>{money(annual)}</td></tr>
+            </tbody>
+        </table>
+        <p class="fine">Source: <a href="{escape(o.get('source', '#'))}" rel="noopener">{escape(o.get('fiscal_year', 'latest fiscal year'))} figures</a>. {'Government outlays are spending, not income.' if is_gov else 'Net income is profit after all costs and taxes; revenue is total sales.'} Per-second figures divide the annual total evenly across the year.</p>
+        <h2>More organisations</h2>
+        <nav class="chips">{''.join(f'<a href="/earns/{x["slug"]}/">{escape(x["name"])}</a>' for x in all_orgs if x["slug"] != o["slug"])}</nav>
+        <p>Or compare with <a href="/earns/">people and everyday jobs</a>.</p>
+"""
+    og = og_card(f"earns-{o['slug']}", name, f"{money(per_second)} every second", f"{short_money(annual)} {basis} · {o.get('fiscal_year', '')}".strip(" ·"))
+    write(path, shell(path=path, title=title, description=description, body=body, json_ld=webpage_ld(title, description, path), og=og,
                       breadcrumbs=[("Live Salary", "/"), ("Who earns what", "/earns/"), (name, path)]))
     return path
 
@@ -657,7 +799,7 @@ def trust_pages(people, occupations, states):
             <li><strong>Budget illustrations:</strong> {money(TYPICAL_RENT)} rent (roughly the national median asking rent) and {money(TYPICAL_GROCERIES)} a month of groceries for one adult. Your costs will differ; the point is scale, not precision.</li>
         </ul>
         <h2>Occupation pay</h2>
-        <p>Median annual wages for occupations are the national medians from the US Bureau of Labor Statistics Occupational Employment and Wage Statistics, May 2024 release, checked against the BLS data file. "Median" means half of workers in that job earn more and half earn less; pay varies widely by state, employer and experience. Where the site uses a plain job name for a BLS category (for example "family doctor" for family medicine physicians, or "dentist" for all dentists), the broader figure is used.</p>
+        <p>Median annual wages for occupations are the national medians from the US Bureau of Labor Statistics Occupational Employment and Wage Statistics ({escape(OCC_SOURCE.split(', ', 1)[-1])}), fetched from the BLS public data API. "Median" means half of workers in that job earn more and half earn less; pay varies widely by state, employer and experience. Where the site uses a plain job name for a BLS category (for example "family doctor" for family medicine physicians, or "dentist" for all dentists), the broader figure is used.</p>
         <h2>Celebrity and executive earnings</h2>
         <p>Athletes and musicians use Forbes' estimates of 12-month earnings (salary, prize money, endorsements and other income, before tax and fees) from its 2025 highest-paid lists. Executives use total compensation reported in company proxy statements, which is mostly stock awards whose eventual value differs. These are public estimates, not audited figures, and are refreshed when new lists are published. Per-second figures divide the annual estimate evenly across all 31,536,000 seconds of the year.</p>
         <h2>The live counter</h2>
@@ -770,14 +912,15 @@ def write_sitemaps(groups):
 
 
 HOURLY_VALUES = []
+OCC_SOURCE = "US Bureau of Labor Statistics, OEWS"
 
 
 def main():
-    global HOURLY_VALUES
+    global HOURLY_VALUES, OCC_SOURCE
     wages = json.load(open(os.path.join(DATA, "wages.json")))
     people = json.load(open(os.path.join(DATA, "people.json")))
     occupations = json.load(open(os.path.join(DATA, "occupations.json")))["occupations"]
-    occ_source = json.load(open(os.path.join(DATA, "occupations.json")))["source"]
+    occ_source = OCC_SOURCE = json.load(open(os.path.join(DATA, "occupations.json")))["source"]
     states_file = os.path.join(DATA, "states.json")
     states_data = json.load(open(states_file)) if os.path.exists(states_file) else None
     states = sorted(states_data["states"], key=lambda s: s["name"]) if states_data else []
@@ -812,6 +955,10 @@ def main():
             groups["earners"].append(earner_page(p, "person", g["source"], all_earners, occupations))
     for o in occupations:
         groups["earners"].append(earner_page(o, "occupation", occ_source, all_earners, occupations))
+    orgs_file = os.path.join(DATA, "organizations.json")
+    orgs = json.load(open(orgs_file))["organizations"] if os.path.exists(orgs_file) else []
+    for o in orgs:
+        groups["earners"].append(org_page(o, orgs))
 
     groups["pages"].append(hub("/hourly/", "Hourly Wage to Salary: What Each Hourly Rate Earns Per Year | Live Salary",
         "Pick an hourly wage to see what it earns per year, month and week, what's left after tax in every state, whether it's good pay, and watch it add up live.",
@@ -843,6 +990,11 @@ def main():
     occ_cards = "".join(
         f'<a class="card" href="/earns/{o["slug"]}/"><strong>{escape(o["name"])}</strong><span>US median</span><em>{money(o["annual"])}/yr · {money(o["annual"] / HOURS_PER_YEAR, cents=True)}/hr</em></a>'
         for o in sorted(occupations, key=lambda o: -o["annual"]))
+    if orgs:
+        org_cards = "".join(
+            f'<a class="card" href="/earns/{o["slug"]}/"><strong>{escape(o["name"])}</strong><span>{escape(o.get("basis", ""))}, {escape(o.get("fiscal_year", ""))}</span><em>{short_money(o["annual"])}/yr · {money(o["annual"] / 31536000)}/sec</em></a>'
+            for o in sorted(orgs, key=lambda o: -o["annual"]))
+        people_sections.append(f"<h2>Companies &amp; governments</h2>\n<div class=\"cards\">{org_cards}</div>")
     people_sections.append(f"<h2>Occupations</h2>\n<div class=\"cards\">{occ_cards}</div>")
     groups["pages"].append(hub("/earns/", "Who Earns What: Athletes, Celebrities, CEOs and Everyday Jobs, Per Second | Live Salary",
         "See how fast the world's highest-paid athletes, musicians and CEOs earn — per second, minute and hour — next to the median pay for everyday jobs.",
@@ -854,8 +1006,10 @@ def main():
     groups["pages"] += embed_pages()
 
     total = write_sitemaps(groups)
+    cards = write_og_cards()
     print(f"Generated {sum(len(v) for v in groups.values()) - 1} pages; sitemap index covers {total} URLs"
-          f"{' (no states.json: state pages skipped)' if not states else f' across {len(states)} states'}.")
+          f"{' (no states.json: state pages skipped)' if not states else f' across {len(states)} states'}; {cards} social cards in build/og/ "
+          f"(run build/render_og.sh to render new ones).")
 
 
 if __name__ == "__main__":

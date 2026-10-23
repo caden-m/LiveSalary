@@ -1,126 +1,524 @@
 {
-  "_note": "US median annual wages, BLS Occupational Employment and Wage Statistics, May 2024 national file (oesm24nat). Verified 2026-10-17. May 2025 data is now published; refresh all values from oesm25nat when updating.",
-  "source": "US Bureau of Labor Statistics, OEWS May 2024 (national medians)",
+  "_note": "US national median annual wages, BLS OEWS May 2025 (datatype A_MEDIAN). Fetched 2026-10-23 via BLS Public Data API v2 (series OEUN0000000000000<SOC>13; datatype 13 = annual median).",
+  "source": "US Bureau of Labor Statistics, OEWS May 2025 (national medians)",
   "occupations": [
     {
       "slug": "registered-nurse",
       "name": "Registered nurse",
       "plural": "registered nurses",
-      "annual": 93600
+      "soc": "29-1141",
+      "annual": 97550
     },
     {
       "slug": "software-developer",
       "name": "Software developer",
       "plural": "software developers",
-      "annual": 133080
+      "soc": "15-1252",
+      "annual": 135980
     },
     {
       "slug": "elementary-school-teacher",
       "name": "Elementary school teacher",
       "plural": "elementary school teachers",
-      "annual": 62340
+      "soc": "25-2021",
+      "annual": 63970
     },
     {
       "slug": "police-officer",
       "name": "Police officer",
       "plural": "police officers",
-      "annual": 76290
+      "soc": "33-3051",
+      "annual": 76210
     },
     {
       "slug": "electrician",
       "name": "Electrician",
       "plural": "electricians",
-      "annual": 62350
+      "soc": "47-2111",
+      "annual": 63190
     },
     {
       "slug": "plumber",
       "name": "Plumber",
       "plural": "plumbers",
-      "annual": 62970
+      "soc": "47-2152",
+      "annual": 63800
     },
     {
       "slug": "lawyer",
       "name": "Lawyer",
       "plural": "lawyers",
-      "annual": 151160
+      "soc": "23-1011",
+      "annual": 159670
     },
     {
       "slug": "accountant",
       "name": "Accountant",
       "plural": "accountants",
-      "annual": 81680
+      "soc": "13-2011",
+      "annual": 83680
     },
     {
       "slug": "truck-driver",
       "name": "Truck driver",
       "plural": "heavy and tractor-trailer truck drivers",
-      "annual": 57440
+      "soc": "53-3032",
+      "annual": 58640
     },
     {
       "slug": "fast-food-worker",
       "name": "Fast food worker",
       "plural": "fast food and counter workers",
-      "annual": 30480
+      "soc": "35-3023",
+      "annual": 31200
     },
     {
       "slug": "airline-pilot",
       "name": "Airline pilot",
       "plural": "airline pilots, copilots and flight engineers",
-      "annual": 226600
+      "soc": "53-2011",
+      "annual": 232140
     },
     {
       "slug": "dentist",
       "name": "Dentist",
       "plural": "dentists",
-      "annual": 179210
+      "soc": "29-1020",
+      "annual": 176110
     },
     {
       "slug": "pharmacist",
       "name": "Pharmacist",
       "plural": "pharmacists",
-      "annual": 137480
+      "soc": "29-1051",
+      "annual": 140910
     },
     {
       "slug": "firefighter",
       "name": "Firefighter",
       "plural": "firefighters",
-      "annual": 59530
+      "soc": "33-2011",
+      "annual": 59280
     },
     {
       "slug": "mechanical-engineer",
       "name": "Mechanical engineer",
       "plural": "mechanical engineers",
-      "annual": 102320
+      "soc": "17-2141",
+      "annual": 104110
     },
     {
       "slug": "graphic-designer",
       "name": "Graphic designer",
       "plural": "graphic designers",
-      "annual": 61300
+      "soc": "27-1024",
+      "annual": 62960
     },
     {
       "slug": "chef",
       "name": "Chef",
       "plural": "chefs and head cooks",
-      "annual": 60990
+      "soc": "35-1011",
+      "annual": 62470
     },
     {
       "slug": "family-doctor",
       "name": "Family doctor",
       "plural": "family medicine physicians",
-      "annual": 238380
+      "soc": "29-1215",
+      "annual": 244180
     },
     {
       "slug": "construction-laborer",
       "name": "Construction laborer",
       "plural": "construction laborers",
-      "annual": 46730
+      "soc": "47-2061",
+      "annual": 47120
     },
     {
       "slug": "cashier",
       "name": "Cashier",
       "plural": "cashiers",
-      "annual": 31190
+      "soc": "41-2011",
+      "annual": 32880
+    },
+    {
+      "slug": "high-school-teacher",
+      "name": "High school teacher",
+      "plural": "high school teachers",
+      "soc": "25-2031",
+      "annual": 72040
+    },
+    {
+      "slug": "physician-assistant",
+      "name": "Physician assistant",
+      "plural": "physician assistants",
+      "soc": "29-1071",
+      "annual": 135880
+    },
+    {
+      "slug": "nurse-practitioner",
+      "name": "Nurse practitioner",
+      "plural": "nurse practitioners",
+      "soc": "29-1171",
+      "annual": 132300
+    },
+    {
+      "slug": "physical-therapist",
+      "name": "Physical therapist",
+      "plural": "physical therapists",
+      "soc": "29-1123",
+      "annual": 102760
+    },
+    {
+      "slug": "veterinarian",
+      "name": "Veterinarian",
+      "plural": "veterinarians",
+      "soc": "29-1131",
+      "annual": 130100
+    },
+    {
+      "slug": "surgeon",
+      "name": "Surgeon",
+      "plural": "surgeons",
+      "soc": "29-1240",
+      "annual": 369540
+    },
+    {
+      "slug": "anesthesiologist",
+      "name": "Anesthesiologist",
+      "plural": "anesthesiologists",
+      "soc": "29-1211",
+      "annual": 391490
+    },
+    {
+      "slug": "pediatrician",
+      "name": "Pediatrician",
+      "plural": "general pediatricians",
+      "soc": "29-1221",
+      "annual": 210040
+    },
+    {
+      "slug": "psychologist",
+      "name": "Psychologist",
+      "plural": "clinical and counseling psychologists",
+      "soc": "19-3033",
+      "annual": 100580
+    },
+    {
+      "slug": "social-worker",
+      "name": "Social worker",
+      "plural": "child, family and school social workers",
+      "soc": "21-1021",
+      "annual": 59550
+    },
+    {
+      "slug": "paralegal",
+      "name": "Paralegal",
+      "plural": "paralegals and legal assistants",
+      "soc": "23-2011",
+      "annual": 62890
+    },
+    {
+      "slug": "financial-analyst",
+      "name": "Financial analyst",
+      "plural": "financial and investment analysts",
+      "soc": "13-2051",
+      "annual": 102740
+    },
+    {
+      "slug": "marketing-manager",
+      "name": "Marketing manager",
+      "plural": "marketing managers",
+      "soc": "11-2021",
+      "annual": 166790
+    },
+    {
+      "slug": "human-resources-specialist",
+      "name": "Human resources specialist",
+      "plural": "human resources specialists",
+      "soc": "13-1071",
+      "annual": 75940
+    },
+    {
+      "slug": "data-scientist",
+      "name": "Data scientist",
+      "plural": "data scientists",
+      "soc": "15-2051",
+      "annual": 120230
+    },
+    {
+      "slug": "web-developer",
+      "name": "Web developer",
+      "plural": "web developers",
+      "soc": "15-1254",
+      "annual": 92650
+    },
+    {
+      "slug": "computer-systems-analyst",
+      "name": "Computer systems analyst",
+      "plural": "computer systems analysts",
+      "soc": "15-1211",
+      "annual": 105850
+    },
+    {
+      "slug": "it-support-specialist",
+      "name": "IT support specialist",
+      "plural": "computer user support specialists",
+      "soc": "15-1232",
+      "annual": 61860
+    },
+    {
+      "slug": "civil-engineer",
+      "name": "Civil engineer",
+      "plural": "civil engineers",
+      "soc": "17-2051",
+      "annual": 100840
+    },
+    {
+      "slug": "electrical-engineer",
+      "name": "Electrical engineer",
+      "plural": "electrical engineers",
+      "soc": "17-2071",
+      "annual": 120630
+    },
+    {
+      "slug": "architect",
+      "name": "Architect",
+      "plural": "architects",
+      "soc": "17-1011",
+      "annual": 99280
+    },
+    {
+      "slug": "carpenter",
+      "name": "Carpenter",
+      "plural": "carpenters",
+      "soc": "47-2031",
+      "annual": 60580
+    },
+    {
+      "slug": "hvac-technician",
+      "name": "HVAC technician",
+      "plural": "HVAC mechanics and installers",
+      "soc": "49-9021",
+      "annual": 61010
+    },
+    {
+      "slug": "auto-mechanic",
+      "name": "Auto mechanic",
+      "plural": "automotive service technicians and mechanics",
+      "soc": "49-3023",
+      "annual": 50620
+    },
+    {
+      "slug": "welder",
+      "name": "Welder",
+      "plural": "welders, cutters, solderers and brazers",
+      "soc": "51-4121",
+      "annual": 53750
+    },
+    {
+      "slug": "bus-driver",
+      "name": "Bus driver",
+      "plural": "transit and intercity bus drivers",
+      "soc": "53-3052",
+      "annual": 59050
+    },
+    {
+      "slug": "delivery-driver",
+      "name": "Delivery driver",
+      "plural": "light truck drivers",
+      "soc": "53-3033",
+      "annual": 44860
+    },
+    {
+      "slug": "warehouse-worker",
+      "name": "Warehouse worker",
+      "plural": "stockers and order fillers",
+      "soc": "53-7065",
+      "annual": 37330
+    },
+    {
+      "slug": "retail-salesperson",
+      "name": "Retail salesperson",
+      "plural": "retail salespersons",
+      "soc": "41-2031",
+      "annual": 35410
+    },
+    {
+      "slug": "customer-service-rep",
+      "name": "Customer service rep",
+      "plural": "customer service representatives",
+      "soc": "43-4051",
+      "annual": 44770
+    },
+    {
+      "slug": "administrative-assistant",
+      "name": "Administrative assistant",
+      "plural": "secretaries and administrative assistants",
+      "soc": "43-6014",
+      "annual": 47540
+    },
+    {
+      "slug": "receptionist",
+      "name": "Receptionist",
+      "plural": "receptionists and information clerks",
+      "soc": "43-4171",
+      "annual": 38010
+    },
+    {
+      "slug": "bartender",
+      "name": "Bartender",
+      "plural": "bartenders",
+      "soc": "35-3011",
+      "annual": 34340
+    },
+    {
+      "slug": "waiter",
+      "name": "Waiter or waitress",
+      "plural": "waiters and waitresses",
+      "soc": "35-3031",
+      "annual": 35230
+    },
+    {
+      "slug": "cook",
+      "name": "Cook",
+      "plural": "restaurant cooks",
+      "soc": "35-2014",
+      "annual": 37390
+    },
+    {
+      "slug": "hairdresser",
+      "name": "Barber or hairdresser",
+      "plural": "hairdressers, hairstylists and cosmetologists",
+      "soc": "39-5012",
+      "annual": 35790
+    },
+    {
+      "slug": "childcare-worker",
+      "name": "Childcare worker",
+      "plural": "childcare workers",
+      "soc": "39-9011",
+      "annual": 34980
+    },
+    {
+      "slug": "home-health-aide",
+      "name": "Home health aide",
+      "plural": "home health and personal care aides",
+      "soc": "31-1120",
+      "annual": 35800
+    },
+    {
+      "slug": "medical-assistant",
+      "name": "Medical assistant",
+      "plural": "medical assistants",
+      "soc": "31-9092",
+      "annual": 45690
+    },
+    {
+      "slug": "dental-hygienist",
+      "name": "Dental hygienist",
+      "plural": "dental hygienists",
+      "soc": "29-1292",
+      "annual": 98100
+    },
+    {
+      "slug": "emt",
+      "name": "EMT",
+      "plural": "emergency medical technicians",
+      "soc": "29-2042",
+      "annual": 44470
+    },
+    {
+      "slug": "real-estate-agent",
+      "name": "Real estate agent",
+      "plural": "real estate sales agents",
+      "soc": "41-9022",
+      "annual": 52830
+    },
+    {
+      "slug": "insurance-agent",
+      "name": "Insurance agent",
+      "plural": "insurance sales agents",
+      "soc": "41-3021",
+      "annual": 62280
+    },
+    {
+      "slug": "journalist",
+      "name": "Journalist",
+      "plural": "news analysts, reporters and journalists",
+      "soc": "27-3023",
+      "annual": 62200
+    },
+    {
+      "slug": "librarian",
+      "name": "Librarian",
+      "plural": "librarians and media collections specialists",
+      "soc": "25-4022",
+      "annual": 68270
+    },
+    {
+      "slug": "air-traffic-controller",
+      "name": "Air traffic controller",
+      "plural": "air traffic controllers",
+      "soc": "53-2021",
+      "annual": 148080
+    },
+    {
+      "slug": "flight-attendant",
+      "name": "Flight attendant",
+      "plural": "flight attendants",
+      "soc": "53-2031",
+      "annual": 63580
+    },
+    {
+      "slug": "postal-carrier",
+      "name": "Postal carrier",
+      "plural": "postal service mail carriers",
+      "soc": "43-5052",
+      "annual": 60550
+    },
+    {
+      "slug": "janitor",
+      "name": "Janitor",
+      "plural": "janitors and cleaners",
+      "soc": "37-2011",
+      "annual": 36840
+    },
+    {
+      "slug": "landscaper",
+      "name": "Landscaper",
+      "plural": "landscaping and groundskeeping workers",
+      "soc": "37-3011",
+      "annual": 39150
+    },
+    {
+      "slug": "security-guard",
+      "name": "Security guard",
+      "plural": "security guards",
+      "soc": "33-9032",
+      "annual": 38020
+    },
+    {
+      "slug": "ceo",
+      "name": "CEO",
+      "plural": "chief executives",
+      "soc": "11-1011",
+      "annual": 213990
+    },
+    {
+      "slug": "general-manager",
+      "name": "General manager",
+      "plural": "general and operations managers",
+      "soc": "11-1021",
+      "annual": 105770
+    },
+    {
+      "slug": "pro-athlete",
+      "name": "Pro athlete",
+      "plural": "athletes and sports competitors",
+      "soc": "27-2021",
+      "annual": 66710
     }
   ]
 }

@@ -32,6 +32,8 @@ No build step, no framework, no backend. Everything is saved only in the visitor
 - **Privacy mode** blurs every number; the tab title stops showing the amount too.
 - **Auto / dark / light** theme.
 - **Milestone pulses** — the glow flares each time the amount crosses a whole unit (or a larger step at high rates).
+- **Goal, tips and overtime** (Settings → Extras) — a target amount with a progress bar and time-to-go, a flat tips amount added to the day, and time-and-a-half after 8 hours.
+- **Share a snapshot** — the share button renders the current counter to an image on the device and opens the system share sheet (or downloads it).
 - Keyboard: `Space` start/stop · `R` reset · `P` privacy · `S` settings · `Esc` close.
 
 Settings and timer state live in `localStorage` under the key `mls.v2`.
@@ -63,7 +65,9 @@ It reads:
 - `build/data/people.json` — athletes, musicians and executives with estimated annual earnings and sources;
 - `build/data/occupations.json` — BLS median wages.
 
-It writes about 14,000 pages (most of them state pages), the About/Methodology/Privacy/Contact pages, the embed page and widget, and `sitemap.xml` as an index of the files in `sitemaps/`. Federal tax brackets, the US median wage and other assumptions live at the top of the script and are documented on `/methodology/`; refresh them, the state data and the earnings data once a year. Commit the regenerated output along with the data change. Set `CONTACT_EMAIL` in the script to show an address on the contact page.
+- `build/data/organizations.json` — companies and governments with revenue, profit or outlays and sources.
+
+It writes about 14,000 pages (most of them state pages), the About/Methodology/Privacy/Contact pages, the embed page and widget, and `sitemap.xml` as an index of the files in `sitemaps/`. It also writes a social-preview card (SVG) per base page into `build/og/`; run `./build/render_og.sh` afterwards to render new or changed cards to `assets/og/*.png` with macOS QuickLook (state pages reuse their parent wage's card). Federal tax brackets, the US median wage and other assumptions live at the top of the script and are documented on `/methodology/`; refresh them, the state data and the earnings data once a year. Commit the regenerated output along with the data change. Set `CONTACT_EMAIL` in the script to show an address on the contact page.
 
 ## Deploying
 
